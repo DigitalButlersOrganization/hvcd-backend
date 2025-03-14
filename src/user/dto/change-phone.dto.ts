@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
-export class SignInDto {
+export class ChangePhoneDto {
   @ApiProperty({
     example: '+375291111111',
     required: true,
@@ -9,7 +9,7 @@ export class SignInDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^\+[1-9]\d{1,14}$/)
-  phone: string;
+  newPhone: string;
 
   @ApiProperty({
     example: '426785',

@@ -9,6 +9,7 @@ export class UserMapper {
 
     return {
       id: user.id,
+      name: user.name,
       phone: user.phone,
     };
   }

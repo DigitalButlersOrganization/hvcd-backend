@@ -11,6 +11,13 @@ export class UserDto {
   id: string;
 
   @IsString()
+  @ApiProperty({
+    example: 'John',
+    required: true,
+  })
+  name: string;
+
+  @IsString()
   @IsNotEmpty()
   @ApiProperty({
     example: '+375291111111',
