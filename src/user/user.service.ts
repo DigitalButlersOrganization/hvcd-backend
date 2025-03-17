@@ -1,6 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
+  ConflictException, Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,13 +13,13 @@ import { UserDto } from './dto/user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { ChangePhoneDto } from './dto/change-phone.dto.js';
 import { ConfigService } from '@nestjs/config';
-import { OtpService } from '../otp/otp.service.js';
+import { IOtpService, OTP_SERVICE_NAME } from '../otp/otp-service.interface.js';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly configService: ConfigService,
-    private readonly otpService: OtpService,
+    @Inject(OTP_SERVICE_NAME) private readonly otpService: IOtpService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {
     this.otpService.setServiceSid(
