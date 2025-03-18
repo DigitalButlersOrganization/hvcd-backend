@@ -15,6 +15,7 @@ import { AuthService } from './services/auth.service.js';
 import { Response } from 'express';
 import { Cookies } from '../shared/decorators/cookie.js';
 import { RefreshTokenGuard } from './guards/refresh-token.guard.js';
+import { AuthGuard } from './guards/auth.guard.js';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -91,7 +92,7 @@ export class AuthController {
 
   @Post('/logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(RefreshTokenGuard)
+  @UseGuards(AuthGuard, RefreshTokenGuard)
   @ApiBearerAuth()
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
