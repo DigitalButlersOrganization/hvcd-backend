@@ -16,7 +16,7 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
+    private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly revokeRefreshTokenService: RevokeRefreshTokenService,
     private readonly configService: ConfigService,
@@ -29,7 +29,7 @@ export class AuthService {
 
   async verifyAndSignIn(signInDto: SignInDto) {
     const { phone, code } = signInDto;
-    const user = await this.userService.findByPhone(phone);
+    const user = await this.userService.findOrCreate(signInDto);
     const verify = await this.otpService.verifyCode(phone, code);
 
     if (!verify) {
@@ -67,11 +67,11 @@ export class AuthService {
   ): Promise<AuthorizationResponseDto> {
     const payload = { sub: userId };
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '1d',
+      expiresIn: this.configService.get<string>('ACCESS_TOKEN_LIFE_TIME'),
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: this.configService.get<string>('REFRESH_TOKEN_LIFE_TIME'),
     });
 
     return {
