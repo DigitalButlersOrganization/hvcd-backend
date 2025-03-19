@@ -4,6 +4,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
 import { OtpModule } from './otp/otp.module.js';
+import { WalletModule } from './wallet/wallet.module.js';
+import { HeliusModule } from './helius/helius.module.js';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { OtpModule } from './otp/otp.module.js';
     AuthModule,
     UserModule,
     OtpModule,
+    WalletModule,
+    HeliusModule,
   ],
   controllers: [],
   providers: [],
