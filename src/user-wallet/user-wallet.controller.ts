@@ -8,39 +8,50 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { CreateWalletDto } from './dto/create-wallet.dto.js';
-import { WalletService } from './wallet.service.js';
-import { UpdateWalletDto } from './dto/update-wallet.dto.js';
-import { WalletDto } from './dto/wallet.dto.js';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
+import { UserWalletService } from './user-wallet.service.js';
+import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
+import { UserWalletDto } from './dto/user-wallet.dto.js';
+import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
+import { PaginationDto } from '../shared/dto/pagination.dto.js';
+import { PaginatedUserWalletDto } from './dto/paginated-user-wallet.dto.js';
 
-@Controller('wallet')
+@Controller('user-wallet')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
-export class WalletController {
-  constructor(private readonly walletService: WalletService) {}
+export class UserWalletController {
+  constructor(private readonly userWalletService: UserWalletService) {}
 
   @Post()
   @ApiOperation({
     summary: 'Create a new wallet',
   })
   @ApiBody({
-    type: CreateWalletDto,
+    type: CreateUserWalletDto,
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'The record has been successfully created.',
-    type: WalletDto,
+    type: UserWalletDto,
   })
   async create(
-    @Body() createWalletDto: CreateWalletDto,
+    @Body() createUserWalletDto: CreateUserWalletDto,
     @Req() request: Request,
-  ): Promise<WalletDto> {
-    return await this.walletService.create(createWalletDto, request['user']);
+  ): Promise<UserWalletDto> {
+    return await this.userWalletService.create(
+      createUserWalletDto,
+      request['user'],
+    );
   }
 
   @Patch(':id')
@@ -48,21 +59,21 @@ export class WalletController {
     summary: 'Update a wallet',
   })
   @ApiBody({
-    type: UpdateWalletDto,
+    type: UpdateUserWalletDto,
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'The record has been successfully updated.',
-    type: WalletDto,
+    type: UserWalletDto,
   })
   async update(
     @Param('id') id: string,
-    @Body() updateWalletDto: UpdateWalletDto,
+    @Body() updateUserWalletDto: UpdateUserWalletDto,
     @Req() request: Request,
-  ): Promise<WalletDto> {
-    return await this.walletService.update(
+  ): Promise<UserWalletDto> {
+    return await this.userWalletService.update(
       id,
-      updateWalletDto,
+      updateUserWalletDto,
       request['user'],
     );
   }
@@ -74,10 +85,10 @@ export class WalletController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'The record has been successfully retrieved.',
-    type: WalletDto,
+    type: UserWalletDto,
   })
   async findOne(@Param('id') id: string, @Req() request: Request) {
-    return await this.walletService.findOne(id, request['user']);
+    return await this.userWalletService.findOne(id, request['user']);
   }
 
   @Get()
@@ -87,10 +98,13 @@ export class WalletController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'The recordset has been successfully retrieved.',
-    type: [WalletDto],
+    type: PaginatedUserWalletDto,
   })
-  async findAll(@Req() request: Request) {
-    return await this.walletService.findAll(request['user']);
+  async findAll(
+    @Query() paginationDto: PaginationDto,
+    @Req() request: Request,
+  ) {
+    return await this.userWalletService.findAll(request['user'], paginationDto);
   }
 
   @Delete(':id')
@@ -103,6 +117,6 @@ export class WalletController {
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string, @Req() request: Request) {
-    return await this.walletService.remove(id, request['user']);
+    return await this.userWalletService.remove(id, request['user']);
   }
 }

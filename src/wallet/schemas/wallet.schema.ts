@@ -1,7 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { UserDocument } from '../../user/schemas/user.schema.js';
-import mongoose from 'mongoose';
 
 export type WalletDocument = HydratedDocument<Wallet>;
 
@@ -13,20 +11,13 @@ export type WalletDocument = HydratedDocument<Wallet>;
 })
 export class Wallet {
   @Prop({ required: true })
-  name: string;
-
-  @Prop({ required: true })
   address: string;
 
   @Prop({ required: true })
   creationDate: Date;
 
-  @Prop({
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  })
-  user: UserDocument;
+  @Prop({ required: true })
+  balance: number;
 }
 
 export const WalletSchema = SchemaFactory.createForClass(Wallet);

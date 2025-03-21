@@ -1,81 +1,51 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateWalletDto } from './dto/create-wallet.dto.js';
 import { InjectModel } from '@nestjs/mongoose';
 import { Wallet } from './schemas/wallet.schema.js';
 import { Model } from 'mongoose';
 import { WalletMapper } from './wallet.mapper.js';
-import { UpdateWalletDto } from './dto/update-wallet.dto.js';
 import { WalletDto } from './dto/wallet.dto.js';
+import { HeliusService } from '../helius/helius.service.js';
 
 @Injectable()
 export class WalletService {
   constructor(
     @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
+    private readonly heliusService: HeliusService,
   ) {}
 
-  async create(
-    createWalletDto: CreateWalletDto,
-    userId: string,
-  ): Promise<WalletDto> {
+  async create(walletAddress: string): Promise<WalletDto> {
+    await this.heliusService.getAccountInfo(walletAddress);
+
+    const balance = await this.heliusService.getBalance(walletAddress);
     const wallet = await this.walletModel.create({
-      ...createWalletDto,
-      user: userId,
+      address: walletAddress,
       creationDate: new Date(),
+      balance: balance,
     });
 
     return WalletMapper.toDto(wallet);
   }
 
-  async update(
-    id: string,
-    updateWalletDto: UpdateWalletDto,
-    userId: string,
-  ): Promise<WalletDto> {
-    const wallet = await this.walletModel.findOneAndUpdate(
-      {
-        _id: id,
-        user: userId,
-      },
-      { name: updateWalletDto.name },
-      {
-        new: true,
-      },
-    );
+  async update(id: string): Promise<WalletDto> {
+    const wallet = await this.walletModel.findById(id);
 
     if (!wallet) {
       throw new NotFoundException('Wallet not found');
     }
 
+    wallet.balance = await this.heliusService.getBalance(wallet.address);
+    await wallet.save();
+
     return WalletMapper.toDto(wallet);
   }
 
-  async findOne(id: string, userId: string): Promise<WalletDto> {
-    const wallet = await this.walletModel.findOne({
-      _id: id,
-      user: userId,
-    });
+  async findOrCreate(address: string): Promise<WalletDto> {
+    const wallet = await this.walletModel.findOne({ address });
 
     if (!wallet) {
-      throw new NotFoundException('Wallet not found');
+      return this.create(address);
     }
 
     return WalletMapper.toDto(wallet);
-  }
-
-  async findAll(userId: string) {
-    const wallets = await this.walletModel.find({ user: userId });
-
-    return wallets.map(WalletMapper.toDto);
-  }
-
-  async remove(id: string, userId: string) {
-    const result = await this.walletModel.deleteOne({
-      _id: id,
-      user: userId,
-    });
-
-    if (!result.deletedCount) {
-      throw new NotFoundException('Wallet not found');
-    }
   }
 }
