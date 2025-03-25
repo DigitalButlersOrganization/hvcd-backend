@@ -12,25 +12,17 @@ export class PaginationService {
     populate: string | string[] = '',
     projection: ProjectionType<T> = {},
   ): Promise<PaginatedResult<T>> {
-    const { page, limit, search } = paginationDto;
-
-    const filter: FilterQuery<T> = {
-      ...query,
-      $or: [
-        { name: { $regex: search || '', $options: 'i' } },
-        { address: { $regex: search || '', $options: 'i' } },
-      ],
-    };
+    const { page, limit } = paginationDto;
 
     const skip = (page - 1) * limit;
     const [items, total = 1] = await Promise.all([
       model
-        .find(filter, projection)
+        .find(query, projection)
         .skip(skip)
         .limit(limit)
         .populate(populate)
         .exec(),
-      model.find(filter).countDocuments().exec(),
+      model.find(query).countDocuments().exec(),
     ]);
 
     return {

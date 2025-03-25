@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import { UserWallet } from './schemas/user-wallet.schema.js';
 import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UserWalletMapper } from './user-wallet.mapper.js';
@@ -14,6 +14,7 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
+import { FindQueryDto } from './dto/find-query.dto.js';
 
 @Injectable()
 export class UserWalletService {
@@ -92,12 +93,21 @@ export class UserWalletService {
 
   async findAll(
     userId: string,
-    paginationDto: PaginationDto,
+    findQueryDto: FindQueryDto,
   ): Promise<PaginatedResult<UserWalletDto>> {
+    const { search, page, limit } = findQueryDto;
+
+    const searchQuery: FilterQuery<UserWallet> = {
+      $or: [
+        { name: { $regex: search || '', $options: 'i' } },
+        { address: { $regex: search || '', $options: 'i' } },
+      ],
+    };
+
     const paginationResult = await PaginationService.paginate(
       this.userWalletModel,
-      paginationDto,
-      { user: userId },
+      { page, limit },
+      { user: userId, ...searchQuery },
       'wallet',
     );
 
