@@ -18,6 +18,13 @@ export class UserWalletDto {
   name: string;
 
   @ApiProperty({
+    example: '8VWcrZN4nLjhVDdtAnKtbJ6wPtzpFJjGvUU1rBPL5jQf',
+  })
+  @IsString()
+  @IsNotEmpty()
+  publicAddress: string;
+
+  @ApiProperty({
     example: 5,
   })
   @IsNumber()

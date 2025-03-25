@@ -11,7 +11,7 @@ export type TransactionDocument = HydratedDocument<Transaction>;
   versionKey: false,
 })
 export class Transaction {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   signature: string;
 
   @Prop({
@@ -20,6 +20,33 @@ export class Transaction {
     required: true,
   })
   wallet: WalletDocument;
+
+  @Prop({ required: true })
+  from: string;
+
+  @Prop({ required: true })
+  to: string;
+
+  @Prop({ required: true })
+  fee: number;
+
+  @Prop({ required: true })
+  feePayer: string;
+
+  @Prop({ required: true })
+  amount: number;
+
+  @Prop({ required: true })
+  date: Date;
+
+  @Prop()
+  description: string;
+
+  @Prop()
+  type: string;
+
+  @Prop()
+  source: string;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

@@ -7,7 +7,8 @@ import { OtpModule } from './otp/otp.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
 import { HeliusModule } from './helius/helius.module.js';
 import { UserWalletModule } from './user-wallet/user-wallet.module.js';
-import { TransactionsModule } from './transactions/transactions.module.js';
+import { TransactionModule } from './transaction/transaction.module.js';
+import { AblyModule } from './ably/ably.module.js';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { TransactionsModule } from './transactions/transactions.module.js';
     WalletModule,
     HeliusModule,
     UserWalletModule,
-    TransactionsModule,
+    TransactionModule,
+    AblyModule,
   ],
   controllers: [],
   providers: [],

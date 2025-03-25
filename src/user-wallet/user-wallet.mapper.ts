@@ -11,6 +11,7 @@ export class UserWalletMapper {
     return {
       id: userWallet.id,
       name: userWallet.name,
+      publicAddress: userWallet.wallet.publicAddress,
       balance: userWallet.wallet.balance,
       walletAge: 10,
       winrate: {

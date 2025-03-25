@@ -5,7 +5,7 @@ export class WalletMapper {
   static toDto(wallet: WalletDocument): WalletDto {
     return {
       id: wallet.id,
-      address: wallet.address,
+      address: wallet.publicAddress,
       creationDate: wallet.creationDate,
     };
   }

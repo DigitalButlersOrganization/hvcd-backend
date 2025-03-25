@@ -10,8 +10,8 @@ export type WalletDocument = HydratedDocument<Wallet>;
   versionKey: false,
 })
 export class Wallet {
-  @Prop({ required: true })
-  address: string;
+  @Prop({ required: true, unique: true })
+  publicAddress: string;
 
   @Prop({ required: true })
   creationDate: Date;
