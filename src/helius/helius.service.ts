@@ -52,6 +52,18 @@ export class HeliusService {
     return response.result;
   }
 
+  async getSignaturesForAddress(wallet: string) {
+    const response = await this.post('getSignaturesForAddress', [wallet]);
+
+    return response.result;
+  }
+
+  async getTransaction(tx: string) {
+    const response = await this.post('getTransaction', [tx]);
+
+    return response.result;
+  }
+
   async getTransactionHistory(wallet: string, before: string = null) {
     const heliusSolanaApi = this.configService.get<string>('HELIUS_SOLANA_API');
     const heliusApiKey = this.configService.get<string>('HELIUS_API_KEY');
