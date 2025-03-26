@@ -25,7 +25,7 @@ import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedUserWalletDto } from './dto/paginated-user-wallet.dto.js';
-import { FindQueryDto } from './dto/find-query.dto.js';
+import { FindAllQueryDto } from './dto/find-all-query.dto.js';
 
 @Controller('user-wallet')
 @UseGuards(AuthGuard)
@@ -101,8 +101,14 @@ export class UserWalletController {
     description: 'The recordset has been successfully retrieved.',
     type: PaginatedUserWalletDto,
   })
-  async findAll(@Query() findQueryDto: FindQueryDto, @Req() request: Request) {
-    return await this.userWalletService.findAll(request['user'], findQueryDto);
+  async findAll(
+    @Query() findAllQueryDto: FindAllQueryDto,
+    @Req() request: Request,
+  ) {
+    return await this.userWalletService.findAll(
+      request['user'],
+      findAllQueryDto,
+    );
   }
 
   @Delete(':id')

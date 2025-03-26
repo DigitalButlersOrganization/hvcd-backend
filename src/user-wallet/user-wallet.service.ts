@@ -14,7 +14,8 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
-import { FindQueryDto } from './dto/find-query.dto.js';
+import { FindAllQueryDto } from './dto/find-all-query.dto.js';
+import { Order } from './enums/order.enum.js';
 
 @Injectable()
 export class UserWalletService {
@@ -93,9 +94,12 @@ export class UserWalletService {
 
   async findAll(
     userId: string,
-    findQueryDto: FindQueryDto,
+    findAllQueryDto: FindAllQueryDto,
   ): Promise<PaginatedResult<UserWalletDto>> {
-    const { search, page, limit } = findQueryDto;
+    const { search, page, limit, sort_by, order } = findAllQueryDto;
+    const sortQuery = sort_by
+      ? { [sort_by]: order === Order.ASC ? 1 : -1 }
+      : {};
 
     const searchQuery: FilterQuery<UserWallet> = {
       $or: [
@@ -108,6 +112,7 @@ export class UserWalletService {
       this.userWalletModel,
       { page, limit },
       { user: userId, ...searchQuery },
+      sortQuery,
       'wallet',
     );
 
