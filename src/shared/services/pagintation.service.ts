@@ -25,8 +25,6 @@ export class PaginationService {
       model.find(query).countDocuments().exec(),
     ]);
 
-    console.log(items);
-
     return {
       items,
       total,

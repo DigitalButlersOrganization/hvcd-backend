@@ -2,7 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PaginatedResult } from '../models/paginated-result.model.js';
 import { PaginationDto } from '../dto/pagination.dto.js';
 import { Order } from '../enums/order.enum.js';
-import { SortParams } from '../enums/sort-params.enum.js';
+
+const SortParams = {
+  name: 'name',
+  balance: 'balance',
+  walletAge: 'walletAge',
+  winrate: 'winrate.value',
+  totalPnl: 'totalPnl.value',
+};
 
 @Injectable()
 export class PaginationNestService {
@@ -14,12 +21,10 @@ export class PaginationNestService {
   ): PaginatedResult<T> {
     const { page, limit } = paginationDto;
 
-    const sortParam = SortParams[sortBy];
-
-    const sortedItems = Boolean(sortParam)
+    const sortedItems = Boolean(SortParams[sortBy])
       ? items.sort((a, b) => {
-          const aValue = a[sortParam];
-          const bValue = b[sortParam];
+          const aValue = a[SortParams[sortBy]];
+          const bValue = b[SortParams[sortBy]];
 
           if (typeof aValue === 'string') {
             return order === Order.ASC
