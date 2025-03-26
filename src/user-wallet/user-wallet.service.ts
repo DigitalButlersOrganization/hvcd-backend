@@ -12,10 +12,11 @@ import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
-import { PaginationDto } from '../shared/dto/pagination.dto.js';
+// import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindAllQueryDto } from './dto/find-all-query.dto.js';
-import { Order } from './enums/order.enum.js';
+// import { Order } from './enums/order.enum.js';
+import { PaginationNestService } from '../shared/services/pagination-nest.service.js';
 
 @Injectable()
 export class UserWalletService {
@@ -97,9 +98,6 @@ export class UserWalletService {
     findAllQueryDto: FindAllQueryDto,
   ): Promise<PaginatedResult<UserWalletDto>> {
     const { search, page, limit, sort_by, order } = findAllQueryDto;
-    const sortQuery = sort_by
-      ? { [sort_by]: order === Order.ASC ? 1 : -1 }
-      : {};
 
     const searchQuery: FilterQuery<UserWallet> = {
       $or: [
@@ -108,18 +106,26 @@ export class UserWalletService {
       ],
     };
 
-    const paginationResult = await PaginationService.paginate(
+    const searchResult = await PaginationService.paginate(
       this.userWalletModel,
-      { page, limit },
+      { page: 1, limit: Infinity },
       { user: userId, ...searchQuery },
-      sortQuery,
       'wallet',
     );
 
-    const { items, ...pagination } = paginationResult;
+    const { items: foundedItems } = searchResult;
+
+    const mappedItems = foundedItems.map(UserWalletMapper.toDto);
+
+    const { items, ...pagination } = PaginationNestService.paginate(
+      { page, limit },
+      sort_by,
+      order,
+      mappedItems,
+    );
 
     return {
-      items: items.map(UserWalletMapper.toDto),
+      items,
       ...pagination,
     };
   }
