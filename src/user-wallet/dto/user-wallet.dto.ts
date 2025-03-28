@@ -59,4 +59,7 @@ export class UserWalletDto {
     percent: number;
     trend: Trends;
   };
+
+  @ApiProperty()
+  tokenHoldings?: Array<any>;
 }

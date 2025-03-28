@@ -12,7 +12,6 @@ import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
-import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 
@@ -86,7 +85,12 @@ export class UserWalletService {
       throw new NotFoundException('Wallet not found');
     }
 
-    await userWallet.populate('wallet');
+    await userWallet.populate({
+      path: 'wallet',
+      populate: {
+        path: 'tokenHoldings',
+      },
+    });
 
     return UserWalletMapper.toDto(userWallet);
   }

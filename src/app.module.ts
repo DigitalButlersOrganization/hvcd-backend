@@ -9,6 +9,8 @@ import { HeliusModule } from './helius/helius.module.js';
 import { UserWalletModule } from './user-wallet/user-wallet.module.js';
 import { TransactionModule } from './transaction/transaction.module.js';
 import { AblyModule } from './ably/ably.module.js';
+import { TestModule } from './test/test.module.js';
+import { TokenHoldingModule } from './token-holding/token-holding.module.js';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { AblyModule } from './ably/ably.module.js';
     UserWalletModule,
     TransactionModule,
     AblyModule,
+    TestModule,
+    TokenHoldingModule,
   ],
   controllers: [],
   providers: [],

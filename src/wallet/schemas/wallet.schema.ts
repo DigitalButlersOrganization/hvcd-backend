@@ -1,7 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { TokenHoldingDocument } from '../../token-holding/schemas/token-holding.schema.js';
 
-export type WalletDocument = HydratedDocument<Wallet>;
+export type WalletDocument = HydratedDocument<Wallet> & {
+  tokenHoldings?: TokenHoldingDocument[];
+};
 
 @Schema({
   collection: 'wallets',
@@ -21,3 +24,9 @@ export class Wallet {
 }
 
 export const WalletSchema = SchemaFactory.createForClass(Wallet);
+
+WalletSchema.virtual('tokenHoldings', {
+  ref: 'TokenHolding',
+  localField: '_id',
+  foreignField: 'wallet',
+});

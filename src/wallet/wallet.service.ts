@@ -6,6 +6,7 @@ import { WalletMapper } from './wallet.mapper.js';
 import { WalletDto } from './dto/wallet.dto.js';
 import { HeliusService } from '../helius/helius.service.js';
 import { TransactionService } from '../transaction/transaction.service.js';
+import { TokenHoldingService } from '../token-holding/token-holding.service.js';
 
 @Injectable()
 export class WalletService {
@@ -13,6 +14,7 @@ export class WalletService {
     @InjectModel(Wallet.name) private readonly walletModel: Model<Wallet>,
     private readonly heliusService: HeliusService,
     private readonly transactionService: TransactionService,
+    private readonly tokenHoldingService: TokenHoldingService,
   ) {}
 
   async create(walletAddress: string): Promise<WalletDto> {
@@ -24,10 +26,11 @@ export class WalletService {
       creationDate: new Date(),
       balance: balance,
     });
+    await this.tokenHoldingService.import(wallet.id, wallet.publicAddress);
 
-    const transactions =
-      await this.heliusService.getTransactionHistory(walletAddress);
-    await this.transactionService.createTransactions(transactions, wallet.id);
+    // const transactions =
+    //   await this.heliusService.getTransactionHistory(walletAddress);
+    // await this.transactionService.createTransactions(transactions, wallet.id);
 
     return WalletMapper.toDto(wallet);
   }

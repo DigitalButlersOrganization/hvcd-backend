@@ -28,8 +28,14 @@ export class HeliusService {
   }
 
   async getAccountInfo(wallet: string) {
-    const pk = new PublicKey(wallet);
-    const accountInfo = await this.helius.getParsedAccountInfo(pk);
+    const response = await this.post('getAccountInfo', [
+      wallet,
+      {
+        encoding: 'base58',
+      },
+    ]);
+
+    const accountInfo = response.value;
 
     if (!accountInfo) {
       throw new BadRequestException('Invalid address');
@@ -39,7 +45,7 @@ export class HeliusService {
   }
 
   async getTokenAccountsByOwner(wallet: string) {
-    const response = await this.post('getTokenAccountsByOwner', [
+    return await this.post('getTokenAccountsByOwner', [
       wallet,
       {
         programId: this.configService.get<string>('HELIUS_PROGRAM_ID'),
@@ -48,8 +54,58 @@ export class HeliusService {
         encoding: 'jsonParsed',
       },
     ]);
+  }
 
-    return response.result;
+  async getAssetsByOwner(wallet: string, page: number = 1) {
+    const response = await fetch(
+      this.configService.get<string>('HELIUS_SOLANA_RPC'),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'text',
+          method: 'getAssetsByOwner',
+          params: {
+            ownerAddress: wallet,
+            page: page,
+            limit: 50,
+            sortBy: {
+              sortBy: 'created',
+              sortDirection: 'asc',
+            },
+            options: {
+              showUnverifiedCollections: true,
+              showCollectionMetadata: true,
+              showGrandTotal: true,
+              showFungible: true,
+              showNativeBalance: true,
+              showInscription: true,
+              showZeroBalance: true,
+            },
+          },
+        }),
+      },
+    );
+
+    return (await response.json()).result.items;
+  }
+
+  async getAllAssetsByOwner(wallet: string) {
+    let assets = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await this.getAssetsByOwner(wallet, page);
+      assets = assets.concat(response);
+      hasMore = response.length === 50;
+      page++;
+    }
+
+    return assets;
   }
 
   async getSignaturesForAddress(wallet: string) {
@@ -101,6 +157,6 @@ export class HeliusService {
       params,
     });
 
-    return response.data;
+    return response.data.result;
   }
 }
