@@ -6,6 +6,7 @@ import {
   TokenHoldingSchema,
 } from './schemas/token-holding.schema.js';
 import { HeliusModule } from '../helius/helius.module.js';
+import { TokenHoldingController } from './token-holding.controller.js';
 
 @Module({
   providers: [TokenHoldingService],
@@ -16,5 +17,6 @@ import { HeliusModule } from '../helius/helius.module.js';
     HeliusModule,
   ],
   exports: [TokenHoldingService],
+  controllers: [TokenHoldingController],
 })
 export class TokenHoldingModule {}

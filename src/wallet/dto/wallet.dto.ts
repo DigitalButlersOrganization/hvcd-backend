@@ -10,7 +10,7 @@ export class WalletDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  address: string;
+  publicAddress: string;
 
   @ApiProperty()
   @IsDateString()

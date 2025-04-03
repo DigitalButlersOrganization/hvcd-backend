@@ -16,5 +16,6 @@ import { HeliusModule } from '../helius/helius.module.js';
     HeliusModule,
   ],
   controllers: [UserWalletController],
+  exports: [UserWalletService],
 })
 export class UserWalletModule {}

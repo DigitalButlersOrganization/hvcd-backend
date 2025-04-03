@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model } from 'mongoose';
-import { UserWallet } from './schemas/user-wallet.schema.js';
+import {
+  UserWallet,
+  UserWalletDocument,
+} from './schemas/user-wallet.schema.js';
 import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UserWalletMapper } from './user-wallet.mapper.js';
 import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
@@ -14,6 +17,7 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
+import { FindManyQueryDto } from './dto/queries/find-many-query.dto.js';
 
 @Injectable()
 export class UserWalletService {
@@ -121,6 +125,10 @@ export class UserWalletService {
       items: items.map(UserWalletMapper.toDto),
       ...pagination,
     };
+  }
+
+  async findMany(filter: FindManyQueryDto): Promise<UserWalletDocument[]> {
+    return this.userWalletModel.find(filter);
   }
 
   async remove(id: string, userId: string): Promise<void> {

@@ -11,6 +11,8 @@ import { TransactionModule } from './transaction/transaction.module.js';
 import { AblyModule } from './ably/ably.module.js';
 import { TestModule } from './test/test.module.js';
 import { TokenHoldingModule } from './token-holding/token-holding.module.js';
+import { PriceHistoryModule } from './price-history/price-history.module.js';
+import { FeedModule } from './feed/feed.module.js';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { TokenHoldingModule } from './token-holding/token-holding.module.js';
     AblyModule,
     TestModule,
     TokenHoldingModule,
+    PriceHistoryModule,
+    FeedModule,
   ],
   controllers: [],
   providers: [],

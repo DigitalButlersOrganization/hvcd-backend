@@ -23,7 +23,6 @@ import { UserWalletService } from './user-wallet.service.js';
 import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
 import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
-import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { PaginatedUserWalletDto } from './dto/paginated-user-wallet.dto.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 

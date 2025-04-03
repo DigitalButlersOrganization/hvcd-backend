@@ -28,7 +28,7 @@ export class UserWalletMapper {
       name: userWallet.name,
       publicAddress: userWallet.wallet.publicAddress,
       balance: userWallet.wallet.balance,
-      walletAge: 10,
+      creationDate: userWallet.wallet.creationDate,
       winrate: {
         value: 10,
         trend: Trends.UP,

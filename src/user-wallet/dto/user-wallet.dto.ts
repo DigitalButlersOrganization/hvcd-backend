@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { Trends } from '../enums/trends.enum.js';
 
 export class UserWalletDto {
@@ -32,9 +32,10 @@ export class UserWalletDto {
   balance: number;
 
   @ApiProperty({
-    example: 10,
+    example: '2025-04-01T13:17:16.620Z',
   })
-  walletAge: number;
+  @IsDateString()
+  creationDate: Date;
 
   @ApiProperty({
     example: {

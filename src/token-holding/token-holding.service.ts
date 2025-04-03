@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { TokenHolding } from './schemas/token-holding.schema.js';
 import { Model } from 'mongoose';
 import { HeliusService } from '../helius/helius.service.js';
-import { WalletDto } from '../wallet/dto/wallet.dto.js';
 
 @Injectable()
 export class TokenHoldingService {
@@ -15,7 +14,6 @@ export class TokenHoldingService {
 
   async import(walletId: string, walletAddress: string) {
     const assets = await this.heliusService.getAllAssetsByOwner(walletAddress);
-    console.log(assets);
     const tokenHoldings = assets.map((asset) => ({
       mintAddress: asset.id,
       balance: asset.token_info.balance,

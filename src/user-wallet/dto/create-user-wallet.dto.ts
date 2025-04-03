@@ -10,7 +10,7 @@ export class CreateUserWalletDto {
   name: string;
 
   @ApiProperty({
-    example: 'CTXZhvzSKjR1ojk8z1oLjzYPb83mQcDEADNLhGtjuYs7',
+    example: 'F19MQcxNeNFdEPSakkXvWqDyRShNJFkL61dfxBF7thJ8',
   })
   @IsString()
   @IsNotEmpty()

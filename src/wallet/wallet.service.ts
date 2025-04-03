@@ -26,11 +26,14 @@ export class WalletService {
       creationDate: new Date(),
       balance: balance,
     });
-    await this.tokenHoldingService.import(wallet.id, wallet.publicAddress);
 
-    // const transactions =
-    //   await this.heliusService.getTransactionHistory(walletAddress);
-    // await this.transactionService.createTransactions(transactions, wallet.id);
+    const dto = WalletMapper.toDto(wallet);
+
+    await this.tokenHoldingService.import(wallet.id, wallet.publicAddress);
+    const transactions = await this.transactionService.createTransactions(dto);
+    transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+    wallet.creationDate = transactions[0].date;
+    await wallet.save();
 
     return WalletMapper.toDto(wallet);
   }

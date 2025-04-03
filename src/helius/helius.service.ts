@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Connection, PublicKey } from '@solana/web3.js';
 import qs from 'qs';
 import axios, { AxiosInstance } from 'axios';
+import { ITransaction } from './interfaces/transaction.interface.js';
 
 @Injectable()
 export class HeliusService {
@@ -120,13 +121,22 @@ export class HeliusService {
     return response.result;
   }
 
-  async getTransactionHistory(wallet: string, before: string = null) {
+  async getTransactionHistory(
+    wallet: string,
+    before: string = null,
+  ): Promise<ITransaction[]> {
     const heliusSolanaApi = this.configService.get<string>('HELIUS_SOLANA_API');
     const heliusApiKey = this.configService.get<string>('HELIUS_API_KEY');
-    const query = qs.stringify({
+    const params = {
       'api-key': heliusApiKey,
-      before: before,
-    });
+      type: 'SWAP',
+    };
+
+    if (before) {
+      params['before'] = before;
+    }
+
+    const query = qs.stringify(params);
 
     const response = await fetch(
       `${heliusSolanaApi}v0/addresses/${wallet}/transactions?${query}`,
@@ -135,18 +145,7 @@ export class HeliusService {
       },
     );
 
-    const transactions = await response.json();
-
-    return transactions.map((transaction) => ({
-      signature: transaction.signature,
-      from: transaction.nativeTransfers[0].fromUserAccount,
-      to: transaction.nativeTransfers[0].toUserAccount,
-      fee: transaction.fee,
-      feePayer: transaction.feePayer,
-      amount: transaction.nativeTransfers[0].amount,
-      date: new Date(transaction.timestamp * 1000),
-      description: transaction.description,
-    }));
+    return await response.json();
   }
 
   private async post(method: string, params?: any[]): Promise<any> {
