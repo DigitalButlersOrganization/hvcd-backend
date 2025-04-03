@@ -18,6 +18,7 @@ import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 import { FindManyQueryDto } from './dto/queries/find-many-query.dto.js';
+import { FindAllQueryDto } from '../wallet/dto/find-all-query.dto.js';
 
 @Injectable()
 export class UserWalletService {
@@ -45,6 +46,7 @@ export class UserWalletService {
     }
 
     userWallet = await this.userWalletModel.create({
+      publicAddress: wallet.publicAddress,
       wallet: wallet.id,
       name: createUserWalletDto.name,
       user: userId,
@@ -108,23 +110,56 @@ export class UserWalletService {
     const searchQuery: FilterQuery<UserWallet> = {
       $or: [
         { name: { $regex: search || '', $options: 'i' } },
-        { address: { $regex: search || '', $options: 'i' } },
+        { publicAddress: { $regex: search || '', $options: 'i' } },
       ],
     };
 
-    const paginationResult = await PaginationService.paginate(
-      this.userWalletModel,
-      { page, limit },
-      { user: userId, ...searchQuery },
-      'wallet',
+    const userWallets = await this.userWalletModel.find({
+      user: userId,
+      ...searchQuery,
+    });
+
+    const walletIds = [];
+    const userWalletsFormating = {};
+    userWallets.forEach((userWallet: UserWalletDocument) => {
+      walletIds.push(userWallet.wallet);
+      userWalletsFormating[userWallet.wallet.toString()] = {
+        name: userWallet.name,
+        pnl: {},
+        winrate: {},
+      };
+    });
+    const findAllQuery = new FindAllQueryDto();
+    findAllQuery.walletIds = walletIds;
+
+    if (findQueryDto.sort) {
+      findAllQuery.sort = findQueryDto.sort;
+    }
+
+    if (findQueryDto.period) {
+      findQueryDto.period = findAllQuery.period;
+    }
+
+    const walletResult = await this.walletService.findAll(
+      findAllQuery,
+      page,
+      limit,
     );
 
-    const { items, ...pagination } = paginationResult;
+    walletResult.items = walletResult.items.map((wallet) => {
+      const userWallet = userWalletsFormating[wallet._id];
+      userWallet['publicAddress'] = wallet.publicAddress;
+      userWallet['balance'] = wallet.balance;
+      userWallet.creationDate = wallet.creationDate;
+      userWallet.pnl = {
+        percent: wallet.pnlPercentage,
+        value: wallet.pnl,
+      };
 
-    return {
-      items: items.map(UserWalletMapper.toDto),
-      ...pagination,
-    };
+      return userWallet;
+    });
+
+    return walletResult;
   }
 
   async findMany(filter: FindManyQueryDto): Promise<UserWalletDocument[]> {

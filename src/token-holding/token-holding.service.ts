@@ -14,10 +14,12 @@ export class TokenHoldingService {
 
   async import(walletId: string, walletAddress: string) {
     const assets = await this.heliusService.getAllAssetsByOwner(walletAddress);
+
+    console.log(assets);
     const tokenHoldings = assets.map((asset) => ({
       mintAddress: asset.id,
       balance: asset.token_info.balance,
-      name: asset.content.metadata.name,
+      name: asset.content.metadata?.name,
       icon: asset.content.files[0]?.cdn_uri || '',
       wallet: walletId,
     }));

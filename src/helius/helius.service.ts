@@ -104,6 +104,7 @@ export class HeliusService {
       assets = assets.concat(response);
       hasMore = response.length === 50;
       page++;
+      return response;
     }
 
     return assets;

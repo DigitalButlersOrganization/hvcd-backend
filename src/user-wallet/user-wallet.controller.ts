@@ -91,7 +91,7 @@ export class UserWalletController {
     return await this.userWalletService.findOne(id, request['user']);
   }
 
-  @Get()
+  @Post('/search')
   @ApiOperation({
     summary: 'Get all wallets',
   })
@@ -100,7 +100,7 @@ export class UserWalletController {
     description: 'The recordset has been successfully retrieved.',
     type: PaginatedUserWalletDto,
   })
-  async findAll(@Query() findQueryDto: FindQueryDto, @Req() request: Request) {
+  async findAll(@Body() findQueryDto: FindQueryDto, @Req() request: Request) {
     return await this.userWalletService.findAll(request['user'], findQueryDto);
   }
 

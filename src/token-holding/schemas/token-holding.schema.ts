@@ -11,13 +11,13 @@ export type TokenHoldingDocument = HydratedDocument<TokenHolding>;
   timestamps: true,
 })
 export class TokenHolding {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   mintAddress: string;
 
   @Prop({ required: true })
   balance: number;
 
-  @Prop({ required: true })
+  @Prop()
   name: string;
 
   @Prop({

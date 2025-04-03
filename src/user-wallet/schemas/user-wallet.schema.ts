@@ -23,6 +23,9 @@ export class UserWallet {
   })
   wallet: WalletDocument;
 
+  @Prop({ required: true })
+  publicAddress: string;
+
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
