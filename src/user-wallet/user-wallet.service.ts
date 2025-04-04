@@ -14,7 +14,6 @@ import { UserWalletMapper } from './user-wallet.mapper.js';
 import { CreateUserWalletDto } from './dto/create-user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
 import { WalletService } from '../wallet/wallet.service.js';
-import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 import { FindManyQueryDto } from './dto/queries/find-many-query.dto.js';
@@ -124,6 +123,7 @@ export class UserWalletService {
     userWallets.forEach((userWallet: UserWalletDocument) => {
       walletIds.push(userWallet.wallet);
       userWalletsFormating[userWallet.wallet.toString()] = {
+        id: userWallet.id,
         name: userWallet.name,
         pnl: {},
         winrate: {},

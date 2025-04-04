@@ -25,13 +25,13 @@ export class WalletService {
       await this.heliusService.getAccountInfo(walletAddress);
 
       const balance = await this.heliusService.getBalance(walletAddress);
-      console.log(balance);
+
       wallet = await this.walletModel.create({
         publicAddress: walletAddress,
         creationDate: new Date(),
         balance: balance,
       });
-      console.log(wallet);
+
       const dto = WalletMapper.toDto(wallet);
 
       await this.tokenHoldingService.import(wallet.id, wallet.publicAddress);
@@ -69,8 +69,6 @@ export class WalletService {
     const today = new Date();
     const fromDate = new Date(today);
     fromDate.setDate(today.getDate() - period);
-
-    console.log(walletIds);
 
     const stages: PipelineStage[] = [
       {

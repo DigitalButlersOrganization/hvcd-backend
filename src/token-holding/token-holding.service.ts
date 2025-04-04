@@ -15,7 +15,6 @@ export class TokenHoldingService {
   async import(walletId: string, walletAddress: string) {
     const assets = await this.heliusService.getAllAssetsByOwner(walletAddress);
 
-    console.log(assets);
     const tokenHoldings = assets.map((asset) => ({
       mintAddress: asset.id,
       balance: asset.token_info.balance,
