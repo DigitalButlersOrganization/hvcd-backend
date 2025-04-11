@@ -38,9 +38,9 @@ export class HeliusService {
 
     const accountInfo = response.value;
 
-    if (!accountInfo) {
-      throw new BadRequestException('Invalid address');
-    }
+    // if (!accountInfo) {
+    //   throw new BadRequestException('Invalid address');
+    // }
 
     return accountInfo;
   }
@@ -94,6 +94,14 @@ export class HeliusService {
     return (await response.json()).result.items;
   }
 
+  async getAssets(wallet: string, page: number = 1) {
+    return await this.post('searchAssets', {
+      ownerAddress: wallet,
+      tokenType: 'fungible',
+      page: page,
+    });
+  }
+
   async getAllAssetsByOwner(wallet: string) {
     let assets = [];
     let page = 1;
@@ -104,52 +112,31 @@ export class HeliusService {
       assets = assets.concat(response);
       hasMore = response.length === 50;
       page++;
-      return response;
     }
 
     return assets;
   }
 
-  async getSignaturesForAddress(wallet: string) {
-    const response = await this.post('getSignaturesForAddress', [wallet]);
-
-    return response.result;
-  }
-
-  async getTransaction(tx: string) {
-    const response = await this.post('getTransaction', [tx]);
-
-    return response.result;
-  }
-
-  async getTransactionHistory(
-    wallet: string,
-    before: string = null,
-  ): Promise<ITransaction[]> {
+  async getTransactions(wallet: string, before: string = null) {
     const heliusSolanaApi = this.configService.get<string>('HELIUS_SOLANA_API');
     const heliusApiKey = this.configService.get<string>('HELIUS_API_KEY');
-    const params = {
-      'api-key': heliusApiKey,
-      type: 'SWAP',
-    };
 
-    if (before) {
-      params['before'] = before;
-    }
-
-    const query = qs.stringify(params);
-
-    const response = await fetch(
-      `${heliusSolanaApi}v0/addresses/${wallet}/transactions?${query}`,
+    const response = await axios.get(
+      `${heliusSolanaApi}v0/addresses/${wallet}/transactions`,
       {
-        method: 'GET',
+        params: {
+          'api-key': heliusApiKey,
+          commitment: 'finalized',
+          ...(before && { before }),
+          limit: 100,
+        },
       },
     );
 
-    return await response.json();
+    return await response.data;
   }
 
-  private async post(method: string, params?: any[]): Promise<any> {
+  private async post(method: string, params?: any[] | object): Promise<any> {
     const response = await this.client.post('', {
       jsonrpc: '2.0',
       id: 1,

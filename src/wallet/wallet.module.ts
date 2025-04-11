@@ -5,6 +5,7 @@ import { Wallet, WalletSchema } from './schemas/wallet.schema.js';
 import { HeliusModule } from '../helius/helius.module.js';
 import { TransactionModule } from '../transaction/transaction.module.js';
 import { TokenHoldingModule } from '../token-holding/token-holding.module.js';
+import { AgendaModule } from '../agenda/agenda.module.js';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { TokenHoldingModule } from '../token-holding/token-holding.module.js';
     HeliusModule,
     TransactionModule,
     TokenHoldingModule,
+    AgendaModule,
   ],
   providers: [WalletService],
   exports: [WalletService],

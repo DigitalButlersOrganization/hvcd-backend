@@ -13,6 +13,7 @@ import { TestModule } from './test/test.module.js';
 import { TokenHoldingModule } from './token-holding/token-holding.module.js';
 import { PriceHistoryModule } from './price-history/price-history.module.js';
 import { FeedModule } from './feed/feed.module.js';
+import { AgendaModule } from './agenda/agenda.module.js';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { FeedModule } from './feed/feed.module.js';
     PriceHistoryModule,
     FeedModule,
     TestModule,
+    AgendaModule,
   ],
   controllers: [],
   providers: [],

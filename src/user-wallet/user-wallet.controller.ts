@@ -8,9 +8,9 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/guards/auth.guard.js';
 import {
@@ -25,6 +25,8 @@ import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UpdateUserWalletDto } from './dto/update-user-wallet.dto.js';
 import { PaginatedUserWalletDto } from './dto/paginated-user-wallet.dto.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
+import { PaginatedTokenHoldingsDto } from './dto/paginated-token-holdings.dto.js';
+import { PaginationDto } from '../shared/dto/pagination.dto.js';
 
 @Controller('user-wallet')
 @UseGuards(AuthGuard)
@@ -87,8 +89,12 @@ export class UserWalletController {
     description: 'The record has been successfully retrieved.',
     type: UserWalletDto,
   })
-  async findOne(@Param('id') id: string, @Req() request: Request) {
-    return await this.userWalletService.findOne(id, request['user']);
+  async findOne(
+    @Param('id') id: string,
+    @Req() request: Request,
+    @Query('period') period: number,
+  ) {
+    return await this.userWalletService.findOne(id, request['user'], period);
   }
 
   @Post('/search')
@@ -115,5 +121,54 @@ export class UserWalletController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string, @Req() request: Request) {
     return await this.userWalletService.remove(id, request['user']);
+  }
+
+  @Post(':id/holdings')
+  @ApiOperation({
+    summary: 'Get wallet holdings',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The recordset has been successfully retrieved.',
+    type: PaginatedTokenHoldingsDto,
+  })
+  async getWalletHoldings(
+    @Body() paginationDto: PaginationDto,
+    @Param('id') id: string,
+    @Req() request: Request,
+  ) {
+    return await this.userWalletService.getWalletHoldings(
+      paginationDto,
+      id,
+      request['user'],
+    );
+  }
+
+  @Get(':id/holdings/:holdingId')
+  async getSpecificHolding(
+    @Param('id') id: string,
+    @Param('holdingId') holdingId: string,
+    @Req() request: Request,
+  ) {
+    return await this.userWalletService.getSpecificHolding(
+      id,
+      holdingId,
+      request['user'],
+    );
+  }
+
+  @Post(':id/holdings/:holdingId/transactions')
+  async getHoldingsTransactions(
+    @Param('id') id: string,
+    @Param('holdingId') holdingId: string,
+    @Req() request: Request,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return await this.userWalletService.getHoldingsTransactions(
+      id,
+      holdingId,
+      request['user'],
+      paginationDto,
+    );
   }
 }

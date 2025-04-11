@@ -18,6 +18,9 @@ import { PaginatedResult } from '../shared/models/paginated-result.model.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 import { FindManyQueryDto } from './dto/queries/find-many-query.dto.js';
 import { FindAllQueryDto } from '../wallet/dto/find-all-query.dto.js';
+import { TokenHoldingService } from '../token-holding/token-holding.service.js';
+import { PaginationDto } from '../shared/dto/pagination.dto.js';
+import { FindOneQueryDto } from '../wallet/dto/find-one-query.dto.js';
 
 @Injectable()
 export class UserWalletService {
@@ -25,6 +28,7 @@ export class UserWalletService {
     @InjectModel(UserWallet.name)
     private readonly userWalletModel: Model<UserWallet>,
     private readonly walletService: WalletService,
+    private readonly tokenHoldingService: TokenHoldingService,
   ) {}
 
   async create(
@@ -80,7 +84,7 @@ export class UserWalletService {
     return UserWalletMapper.toDto(userWallet);
   }
 
-  async findOne(id: string, userId: string): Promise<UserWalletDto> {
+  async findOne(id: string, userId: string, period: number = 7) {
     const userWallet = await this.userWalletModel.findOne({
       _id: id,
       user: userId,
@@ -90,14 +94,19 @@ export class UserWalletService {
       throw new NotFoundException('Wallet not found');
     }
 
-    await userWallet.populate({
-      path: 'wallet',
-      populate: {
-        path: 'tokenHoldings',
-      },
-    });
+    const query = new FindOneQueryDto();
+    query.period = period;
+    query.walletId = userWallet.wallet.toString();
+    const wallet = await this.walletService.findOne(query);
+    const tokenTrades = await this.tokenHoldingService.getTokensCountByWallet(
+      wallet._id,
+    );
 
-    return UserWalletMapper.toDto(userWallet);
+    return {
+      ...wallet,
+      tokenTrades: tokenTrades,
+      winrate: 10, // TODO calculate winrate
+    };
   }
 
   async findAll(
@@ -150,7 +159,7 @@ export class UserWalletService {
       const userWallet = userWalletsFormating[wallet._id];
       userWallet['publicAddress'] = wallet.publicAddress;
       userWallet['balance'] = wallet.balance;
-      userWallet.creationDate = wallet.creationDate;
+      userWallet.creationDate = this.getWalletAge(wallet.creationDate);
       userWallet.pnl = {
         percent: wallet.pnlPercentage,
         value: wallet.pnl,
@@ -175,5 +184,70 @@ export class UserWalletService {
     if (!result.deletedCount) {
       throw new NotFoundException('Wallet not found');
     }
+  }
+
+  async getWalletHoldings(
+    paginationDto: PaginationDto,
+    id: string,
+    userId: string,
+  ) {
+    const userWallet = await this.userWalletModel.findOne({
+      _id: id,
+      user: userId,
+    });
+
+    return await this.tokenHoldingService.findWalletHoldings(
+      paginationDto,
+      userWallet.wallet.toString(),
+    );
+  }
+
+  async getSpecificHolding(id: string, holdingId: string, userId: string) {
+    const userWallet = await this.userWalletModel.findOne({
+      _id: id,
+      user: userId,
+    });
+
+    const holding = await this.tokenHoldingService.findSpecificWalletHolding(
+      userWallet.wallet._id.toString(),
+      holdingId,
+    );
+
+    // TODO calculate
+    return {
+      ...holding,
+      totalBought: 1000,
+      totalSold: 1000,
+      pnl: 1000,
+      pnlPercent: 100,
+      betSize: 'Medium',
+    };
+  }
+
+  async getHoldingsTransactions(
+    id: string,
+    holdingId: string,
+    userId: string,
+    paginationDto: PaginationDto,
+  ) {
+    const userWallet = await this.userWalletModel.findOne({
+      _id: id,
+      user: userId,
+    });
+
+    return await this.tokenHoldingService.getHoldingsTransactions(
+      userWallet.wallet.toString(),
+      holdingId,
+      paginationDto,
+    );
+  }
+
+  private getWalletAge(creationDate: string) {
+    const targetDate = new Date(creationDate);
+    const currentDate = new Date();
+    const diffTime = currentDate.getTime() - targetDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return `${diffDays} days`;
   }
 }

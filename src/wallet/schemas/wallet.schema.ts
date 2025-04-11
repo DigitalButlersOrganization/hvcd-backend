@@ -1,10 +1,22 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { TokenHoldingDocument } from '../../token-holding/schemas/token-holding.schema.js';
 
-export type WalletDocument = HydratedDocument<Wallet> & {
-  tokenHoldings?: TokenHoldingDocument[];
-};
+export type WalletDocument = HydratedDocument<Wallet>;
+
+@Schema({ _id: false })
+class ImportStatus {
+  @Prop({ default: null })
+  lastTransaction: string;
+
+  @Prop({ default: null })
+  lastUpdatingAt: Date;
+
+  @Prop({ default: false })
+  done: boolean;
+
+  @Prop({ default: false })
+  isImporting: boolean;
+}
 
 @Schema({
   collection: 'wallets',
@@ -21,12 +33,17 @@ export class Wallet {
 
   @Prop({ required: true })
   balance: number;
+
+  @Prop({
+    type: ImportStatus,
+    default: () => ({
+      lastTransaction: null,
+      lastUpdatingAt: null,
+      done: false,
+      isImporting: false,
+    }),
+  })
+  importStatus: ImportStatus;
 }
 
 export const WalletSchema = SchemaFactory.createForClass(Wallet);
-
-WalletSchema.virtual('tokenHoldings', {
-  ref: 'TokenHolding',
-  localField: '_id',
-  foreignField: 'wallet',
-});

@@ -5,6 +5,7 @@ import { UserWallet, UserWalletSchema } from './schemas/user-wallet.schema.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { UserWalletController } from './user-wallet.controller.js';
 import { HeliusModule } from '../helius/helius.module.js';
+import { TokenHoldingModule } from '../token-holding/token-holding.module.js';
 
 @Module({
   providers: [UserWalletService],
@@ -14,6 +15,7 @@ import { HeliusModule } from '../helius/helius.module.js';
     ]),
     WalletModule,
     HeliusModule,
+    TokenHoldingModule,
   ],
   controllers: [UserWalletController],
   exports: [UserWalletService],

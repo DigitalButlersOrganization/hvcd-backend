@@ -9,6 +9,16 @@ import {
 } from '../price-history/schemas/price-history.schema.js';
 import { TransactionModule } from '../transaction/transaction.module.js';
 import { Wallet, WalletSchema } from '../wallet/schemas/wallet.schema.js';
+import {
+  Transaction,
+  TransactionSchema,
+} from '../transaction/schemas/transaction.schema.js';
+
+import {
+  TokenHolding,
+  TokenHoldingSchema,
+} from '../token-holding/schemas/token-holding.schema.js';
+import { WalletModule } from '../wallet/wallet.module.js';
 
 @Module({
   controllers: [TestController],
@@ -16,10 +26,13 @@ import { Wallet, WalletSchema } from '../wallet/schemas/wallet.schema.js';
     MongooseModule.forFeature([
       { name: PriceHistory.name, schema: PriceHistorySchema },
       { name: Wallet.name, schema: WalletSchema },
+      { name: Transaction.name, schema: TransactionSchema },
+      { name: TokenHolding.name, schema: TokenHoldingSchema },
     ]),
     HeliusModule,
     PriceHistoryModule,
     TransactionModule,
+    WalletModule,
   ],
 })
 export class TestModule {}

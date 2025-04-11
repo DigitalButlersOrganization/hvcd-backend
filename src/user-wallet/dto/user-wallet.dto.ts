@@ -61,6 +61,8 @@ export class UserWalletDto {
     trend: Trends;
   };
 
-  @ApiProperty()
-  tokenHoldings?: Array<any>;
+  @ApiProperty({
+    example: '67daa980830e138424036e68',
+  })
+  wallet: string;
 }
