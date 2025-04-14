@@ -39,10 +39,14 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   app.enableCors({
-    origin: configService.get<string>('FRONT_URI'),
+    origin: [
+      configService.get<string>('FRONT_URI'),
+      'https://db-hvcd-platform-dev.up.railway.app',
+    ],
     credentials: true,
   });
 
   await app.listen(port);
 }
+
 bootstrap();

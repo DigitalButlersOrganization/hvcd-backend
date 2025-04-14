@@ -8,7 +8,7 @@ export type TransactionDocument = HydratedDocument<Transaction>;
 class Transfer {
   mint: string;
   amount: number;
-  priceUSD: number;
+  price: number;
   priceAmount: number;
 }
 
@@ -55,6 +55,9 @@ export class Transaction {
 
   @Prop()
   action: TransactionActions;
+
+  @Prop()
+  tradableTokenMint: string;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

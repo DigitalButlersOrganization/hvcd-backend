@@ -5,7 +5,6 @@ import { ITransaction } from '../helius/interfaces/transaction.interface.js';
 import { PriceHistoryService } from '../price-history/price-history.service.js';
 import { ConfigService } from '@nestjs/config';
 import { HeliusService } from '../helius/helius.service.js';
-import { WalletDto } from '../wallet/dto/wallet.dto.js';
 import { TransactionActions } from './enums/transaction-actions.enum.js';
 import { Transaction } from './schemas/transaction.schema.js';
 import { WalletDocument } from '../wallet/schemas/wallet.schema.js';
@@ -27,80 +26,22 @@ export class TransactionService {
     this.solanaMint = this.configService.get<string>('SOLANA_MINT');
   }
 
-  async saveTransactions(transactions: ITransaction[], wallet: WalletDocument) {
-    const transactionsWithPrices = await Promise.all(
-      transactions.map(async (transaction) => {
-        const from = transaction.tokenTransfers[0];
-        const to = transaction.tokenTransfers[1];
-
-        const date = new Date(transaction.timestamp * 1000);
-        const price = await this.priceHistoryService.getPriceByDate(date);
-        const { fromPrice, toPrice } = this.getPrices(from, to, price.price);
-
-        return {
-          description: transaction.description,
-          type: transaction.type,
-          source: transaction.source,
-          fee: transaction.fee,
-          feePayer: transaction.feePayer,
-          signature: transaction.signature,
-          date: date,
-          from: {
-            mint: from.mint,
-            amount: from.tokenAmount,
-            price: fromPrice,
-            priceAmount: from.tokenAmount * fromPrice,
-          },
-          to: {
-            mint: to.mint,
-            amount: to.tokenAmount,
-            price: toPrice,
-            priceAmount: to.tokenAmount * toPrice,
-          },
-          wallet: wallet.id,
-          action: this.transactionType(from.mint, to.mint),
-        };
-      }),
-    );
-
-    return await this.transactionModel.insertMany(transactionsWithPrices);
-  }
-
   async formatTransaction(transaction: ITransaction, wallet: WalletDocument) {
-    const from = transaction.tokenTransfers[0];
-    const to = transaction.tokenTransfers[1];
-    const transactionType = this.transactionType(from.mint, to.mint);
+    const tradeData = await this.getTradeData(transaction);
 
-    if (!transactionType) {
+    if (!tradeData.action) {
       return null;
     }
 
-    const date = new Date(transaction.timestamp * 1000);
-    const price = await this.priceHistoryService.getPriceByDate(date);
-    const { fromPrice, toPrice } = this.getPrices(from, to, price.price);
-
     return {
+      ...tradeData,
       description: transaction.description,
       type: transaction.type,
       source: transaction.source,
       fee: transaction.fee,
       feePayer: transaction.feePayer,
       signature: transaction.signature,
-      date: date,
-      from: {
-        mint: from.mint,
-        amount: from.tokenAmount,
-        price: fromPrice,
-        priceAmount: from.tokenAmount * fromPrice,
-      },
-      to: {
-        mint: to.mint,
-        amount: to.tokenAmount,
-        price: toPrice,
-        priceAmount: to.tokenAmount * toPrice,
-      },
       wallet: wallet.id,
-      action: transactionType,
     };
   }
 
@@ -172,24 +113,6 @@ export class TransactionService {
     }
   }
 
-  private getPrices(from, to, price: number) {
-    let fromPrice: number;
-    let toPrice: number;
-
-    if (from.mint === this.solanaMint) {
-      fromPrice = price;
-      toPrice = (fromPrice * from.tokenAmount) / to.tokenAmount;
-    } else {
-      toPrice = price;
-      fromPrice = (toPrice * to.tokenAmount) / from.tokenAmount;
-    }
-
-    return {
-      fromPrice,
-      toPrice,
-    };
-  }
-
   async getByMintAndWallet(
     walletId: string,
     mint: string,
@@ -205,13 +128,44 @@ export class TransactionService {
     );
   }
 
-  private transactionType(fromMint: string, toMint: string) {
-    if (fromMint === this.solanaMint) {
-      return TransactionActions.BUY;
-    } else if (toMint === this.solanaMint) {
-      return TransactionActions.SELL;
+  private async getTradeData(transaction: ITransaction) {
+    let fromPrice: number;
+    let toPrice: number;
+    let tradableTokenMint: string;
+    let action: string;
+    const from = transaction.tokenTransfers[0];
+    const to = transaction.tokenTransfers[1];
+    const date = new Date(transaction.timestamp * 1000);
+    const price = await this.priceHistoryService.getPriceByDate(date);
+
+    if (from.mint === this.solanaMint) {
+      fromPrice = price.price;
+      toPrice = (fromPrice * from.tokenAmount) / to.tokenAmount;
+      tradableTokenMint = to.mint;
+      action = TransactionActions.BUY;
+    } else {
+      toPrice = price.price;
+      fromPrice = (toPrice * to.tokenAmount) / from.tokenAmount;
+      tradableTokenMint = from.mint;
+      action = TransactionActions.SELL;
     }
 
-    return '';
+    return {
+      date: date,
+      from: {
+        mint: from.mint,
+        amount: from.tokenAmount,
+        price: fromPrice,
+        priceAmount: from.tokenAmount * fromPrice,
+      },
+      to: {
+        mint: to.mint,
+        amount: to.tokenAmount,
+        price: toPrice,
+        priceAmount: to.tokenAmount * toPrice,
+      },
+      tradableTokenMint: tradableTokenMint,
+      action: action,
+    };
   }
 }

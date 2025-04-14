@@ -215,7 +215,7 @@ export class UserWalletService {
 
     // TODO calculate
     return {
-      ...holding,
+      ...holding.toObject(),
       totalBought: 1000,
       totalSold: 1000,
       pnl: 1000,

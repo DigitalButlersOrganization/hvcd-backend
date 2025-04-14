@@ -27,6 +27,7 @@ import { PaginatedUserWalletDto } from './dto/paginated-user-wallet.dto.js';
 import { FindQueryDto } from './dto/find-query.dto.js';
 import { PaginatedTokenHoldingsDto } from './dto/paginated-token-holdings.dto.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
+import { BaseUserWalletDto } from './dto/base-user-wallet.dto.js';
 
 @Controller('user-wallet')
 @UseGuards(AuthGuard)
@@ -44,7 +45,7 @@ export class UserWalletController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'The record has been successfully created.',
-    type: UserWalletDto,
+    type: BaseUserWalletDto,
   })
   async create(
     @Body() createUserWalletDto: CreateUserWalletDto,

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, Get, Injectable } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { HeliusService } from '../helius/helius.service.js';
 import { PriceHistoryService } from '../price-history/price-history.service.js';
@@ -6,13 +6,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { PriceHistory } from '../price-history/schemas/price-history.schema.js';
 import { Model } from 'mongoose';
 import { TransactionService } from '../transaction/transaction.service.js';
-import { Wallet, WalletDocument } from '../wallet/schemas/wallet.schema.js';
-import { Transaction } from '@solana/web3.js';
+import { Wallet } from '../wallet/schemas/wallet.schema.js';
 import { TokenHolding } from '../token-holding/schemas/token-holding.schema.js';
 import { ConfigService } from '@nestjs/config';
 import { WalletService } from '../wallet/wallet.service.js';
-import { sleep } from '@nestjs/terminus/dist/utils/index.js';
-import { ITransaction } from '../helius/interfaces/transaction.interface.js';
+import {
+  Transaction,
+  TransactionDocument,
+} from '../transaction/schemas/transaction.schema.js';
 
 @Controller('test')
 @ApiTags('Test')
@@ -73,85 +74,53 @@ export class TestController {
 
   @Get()
   async test() {
-    const address = 'F19MQcxNeNFdEPSakkXvWqDyRShNJFkL61dfxBF7thJ8';
-    return await this.heliusService.getAssets(
-      'F19MQcxNeNFdEPSakkXvWqDyRShNJFkL61dfxBF7thJ8',
-    );
-    // const wallet = await this.walletService.findByAddress(address);
-    //
-    // if (!wallet.importStatus.done && !wallet.importStatus.isImporting) {
-    //   wallet.importStatus.isImporting = true;
-    //   await wallet.save();
-    //   await this.importTransactions(address, wallet);
-    // }
-    // return { message: 'Import started or already done' };
-  }
+    const wallet = '67fd6b5cd978c0289e6cb274';
 
-  private async importTransactions(address: string, wallet: WalletDocument) {
-    try {
-      const transactions: ITransaction[] =
-        await this.heliusService.getTransactions(
-          address,
-          wallet.importStatus.lastTransaction,
-        );
+    const txs: TransactionDocument[] = await this.transactionModel
+      .find({
+        wallet: wallet,
+      })
+      .sort({ date: 1 });
 
-      if (!transactions.length) {
-        wallet.importStatus.isImporting = false;
-        wallet.importStatus.done = true;
-        await wallet.save();
-        console.log('finish');
-        return;
+    const mintTransactions = {};
+    for (const tx of txs) {
+      if (!mintTransactions[tx.tradableTokenMint]) {
+        mintTransactions[tx.tradableTokenMint] = {
+          totalBoughtUsd: 0,
+          totalSoldUsd: 0,
+          totalAmount: 0,
+          totalAmountUsd: 0,
+          sales: [],
+        };
       }
 
-      const lastTransactionDate = new Date(transactions[0].timestamp * 1000);
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      if (tx.action === 'buy') {
+        mintTransactions[tx.tradableTokenMint].totalAmount += tx.to.amount;
+        mintTransactions[tx.tradableTokenMint].totalAmountUsd +=
+          tx.to.priceAmount;
+        mintTransactions[tx.tradableTokenMint].totalBoughtUsd +=
+          tx.to.priceAmount;
+      } else if (tx.action === 'sell') {
+        let avgBuyPrice = 0;
 
-      if (lastTransactionDate < sixMonthsAgo) {
-        wallet.importStatus.isImporting = false;
-        wallet.importStatus.done = true;
-        await wallet.save();
-        console.log('finish');
-        return;
-      }
-
-      const swapTransactions = [];
-
-      for (const transaction of transactions) {
-        if (
-          transaction.type === 'SWAP' &&
-          transaction.tokenTransfers.length > 1 &&
-          transaction.tokenTransfers.length <= 3
-        ) {
-          const formatedTransaction =
-            await this.transactionService.formatTransaction(
-              transaction,
-              wallet,
-            );
-
-          if (formatedTransaction) {
-            swapTransactions.push(formatedTransaction);
-          }
+        if (mintTransactions[tx.tradableTokenMint].totalAmount > 0) {
+          avgBuyPrice =
+            mintTransactions[tx.tradableTokenMint].totalAmountUsd /
+            mintTransactions[tx.tradableTokenMint].totalAmount;
         }
-      }
-
-      await this.transactionModel.insertMany(swapTransactions);
-
-      wallet.importStatus.lastTransaction =
-        transactions[transactions.length - 1].signature;
-      wallet.importStatus.lastUpdatingAt = new Date();
-      await wallet.save();
-      console.log('push');
-      await this.importTransactions(address, wallet);
-    } catch (e) {
-      wallet.importStatus.isImporting = false;
-      await wallet.save();
-      if (e.status === HttpStatus.TOO_MANY_REQUESTS) {
-        await sleep(500);
-        await this.importTransactions(address, wallet);
-      } else {
-        throw e;
+        const salePricePerCoin = tx.from.price;
+        const isProfitable = salePricePerCoin > avgBuyPrice;
+        mintTransactions[tx.tradableTokenMint].sales.push(isProfitable);
+        mintTransactions[tx.tradableTokenMint].totalAmount -= tx.from.amount;
+        mintTransactions[tx.tradableTokenMint].totalAmountUsd -=
+          tx.from.amount * avgBuyPrice;
+        mintTransactions[tx.tradableTokenMint].totalSoldUsd +=
+          tx.from.priceAmount;
       }
     }
+
+    const holdings = await this.tokenHoldingModel.find({
+      wallet: wallet,
+    });
   }
 }

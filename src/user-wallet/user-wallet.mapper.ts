@@ -1,6 +1,5 @@
 import { UserWalletDto } from './dto/user-wallet.dto.js';
 import { UserWalletDocument } from './schemas/user-wallet.schema.js';
-import { Trends } from './enums/trends.enum.js';
 
 export class UserWalletMapper {
   static toDto(userWallet: UserWalletDocument): UserWalletDto {
@@ -8,6 +7,7 @@ export class UserWalletMapper {
       return null;
     }
 
+    // TODO winrate and pnl
     return {
       id: userWallet.id,
       name: userWallet.name,
@@ -15,15 +15,8 @@ export class UserWalletMapper {
       balance: userWallet.wallet.balance,
       creationDate: userWallet.wallet.creationDate,
       wallet: userWallet.wallet.id,
-      winrate: {
-        value: 10,
-        trend: Trends.UP,
-      },
-      totalPnl: {
-        value: 10,
-        percent: 100,
-        trend: Trends.UP,
-      },
+      winrate: null,
+      totalPnl: null,
     };
   }
 }
