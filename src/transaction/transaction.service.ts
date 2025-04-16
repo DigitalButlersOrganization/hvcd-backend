@@ -129,6 +129,8 @@ export class TransactionService {
     supply: number,
     paginationDto: PaginationDto,
   ) {
+    const skip = (paginationDto.page - 1) * paginationDto.limit;
+
     const transactions = await this.transactionModel.aggregate([
       {
         $match: {
@@ -159,9 +161,23 @@ export class TransactionService {
           },
         },
       },
+      {
+        $facet: {
+          paginatedResults: [{ $skip: skip }, { $limit: paginationDto.limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
     ]);
 
-    return transactions;
+    const total = transactions[0].totalCount[0]?.count || 0;
+
+    return {
+      items: transactions[0].paginatedResults,
+      total,
+      page: paginationDto.page,
+      limit: paginationDto.limit,
+      totalPages: Math.ceil(total / paginationDto.limit),
+    };
   }
 
   private async getTradeData(transaction: ITransaction) {

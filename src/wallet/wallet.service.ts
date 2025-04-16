@@ -96,8 +96,25 @@ export class WalletService {
       {
         $lookup: {
           from: 'transactions',
-          localField: '_id',
-          foreignField: 'wallet',
+          let: { walletId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$wallet', '$$walletId'] },
+                    { $gte: ['$date', fromDate] },
+                    {
+                      $or: [
+                        { $gt: ['$from.amount', 0] },
+                        { $gt: ['$to.amount', 0] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
           as: 'transactions',
         },
       },
@@ -113,21 +130,6 @@ export class WalletService {
         $unwind: {
           path: '$transactions',
           preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $match: {
-          $and: [
-            {
-              $or: [
-                { 'transactions.from.amount': { $gt: 0 } },
-                { 'transactions.to.amount': { $gt: 0 } },
-              ],
-            },
-            {
-              'transactions.date': { $gte: fromDate },
-            },
-          ],
         },
       },
       {
@@ -210,7 +212,7 @@ export class WalletService {
     const walletsAggregate = await this.walletModel.aggregate(stages);
     const wallets = walletsAggregate[0].paginatedResults;
     const total = walletsAggregate[0].totalCount[0]?.count || 0;
-    console.log(wallets);
+
     return {
       items: wallets,
       total,
@@ -317,7 +319,6 @@ export class WalletService {
     ];
 
     const walletAggregate = await this.walletModel.aggregate(stages);
-    console.log(walletAggregate);
 
     return walletAggregate[0];
   }

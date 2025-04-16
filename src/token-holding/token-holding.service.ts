@@ -229,7 +229,7 @@ export class TokenHoldingService {
 
     const tokenHoldings = tokenHoldingsAggregate[0].paginatedResults;
     const total = tokenHoldingsAggregate[0].totalCount[0]?.count || 0;
-    console.log(tokenHoldings);
+
     return {
       items: tokenHoldings,
       total,
@@ -370,15 +370,6 @@ export class TokenHoldingService {
       holding.supply,
       paginationDto,
     );
-
-    // const transactionItems = transactions.items.map((transaction) => {
-    //   return {
-    //     signature: transaction.signature,
-    //     date: transaction.date,
-    //     action: transaction.action,
-    //     amount: transaction.to.priceAmount,
-    //   };
-    // });
 
     return transactions;
   }

@@ -164,7 +164,7 @@ export class UserWalletController {
     @Param('id') id: string,
     @Param('holdingId') holdingId: string,
     @Req() request: Request,
-    @Query() paginationDto: PaginationDto,
+    @Body() paginationDto: PaginationDto,
   ) {
     return await this.userWalletService.getHoldingsTransactions(
       id,
