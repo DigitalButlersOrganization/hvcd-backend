@@ -32,8 +32,8 @@ export class TokenHoldingService {
           balance: new Decimal(asset.token_info.balance)
             .div(Math.pow(10, decimals))
             .toNumber(),
-          pricePerToken: asset.token_info.price_info.price_per_token,
-          totalPrice: asset.token_info.price_info.total_price,
+          pricePerToken: asset.token_info.price_info?.price_per_token || 0,
+          totalPrice: asset.token_info.price_info?.total_price || 0,
           name: asset.content.metadata?.name,
           icon: asset.content.files[0]?.cdn_uri || '',
           wallet: wallet._id,
