@@ -28,6 +28,7 @@ import { FindQueryDto } from './dto/find-query.dto.js';
 import { PaginatedTokenHoldingsDto } from './dto/paginated-token-holdings.dto.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { BaseUserWalletDto } from './dto/base-user-wallet.dto.js';
+import { FindHoldingsDto } from '../token-holding/dto/find-holdings.dto.js';
 
 @Controller('user-wallet')
 @UseGuards(AuthGuard)
@@ -134,11 +135,11 @@ export class UserWalletController {
     type: PaginatedTokenHoldingsDto,
   })
   async getWalletHoldings(
-    @Body() paginationDto: PaginationDto,
+    @Body() paginationDto: FindHoldingsDto,
     @Param('id') id: string,
     @Req() request: Request,
   ) {
-    return await this.userWalletService.getWalletHoldings(
+    return await this.userWalletService.findWalletHoldings(
       paginationDto,
       id,
       request['user'],

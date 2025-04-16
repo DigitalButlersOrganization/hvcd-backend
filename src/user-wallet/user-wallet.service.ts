@@ -21,6 +21,7 @@ import { FindAllQueryDto } from '../wallet/dto/find-all-query.dto.js';
 import { TokenHoldingService } from '../token-holding/token-holding.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { FindOneQueryDto } from '../wallet/dto/find-one-query.dto.js';
+import { FindHoldingsDto } from '../token-holding/dto/find-holdings.dto.js';
 
 @Injectable()
 export class UserWalletService {
@@ -98,14 +99,11 @@ export class UserWalletService {
     query.period = period;
     query.walletId = userWallet.wallet.toString();
     const wallet = await this.walletService.findOne(query);
-    const tokenTrades = await this.tokenHoldingService.getTokensCountByWallet(
-      wallet._id,
-    );
 
     return {
+      name: userWallet.name,
       ...wallet,
-      tokenTrades: tokenTrades,
-      winrate: 10, // TODO calculate winrate
+      creationDate: this.getWalletAge(wallet.creationDate),
     };
   }
 
@@ -164,6 +162,7 @@ export class UserWalletService {
         percent: wallet.pnlPercentage,
         value: wallet.pnl,
       };
+      userWallet.winrate = wallet.winrate;
 
       return userWallet;
     });
@@ -186,8 +185,8 @@ export class UserWalletService {
     }
   }
 
-  async getWalletHoldings(
-    paginationDto: PaginationDto,
+  async findWalletHoldings(
+    paginationDto: FindHoldingsDto,
     id: string,
     userId: string,
   ) {

@@ -44,6 +44,21 @@ export class Wallet {
     }),
   })
   importStatus: ImportStatus;
+
+  @Prop({
+    type: {
+      7: { type: Number },
+      30: { type: Number },
+      90: { type: Number },
+      180: { type: Number },
+    },
+  })
+  winrate: {
+    7: number;
+    30: number;
+    90: number;
+    180: number;
+  };
 }
 
 export const WalletSchema = SchemaFactory.createForClass(Wallet);

@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { TokenHolding } from './schemas/token-holding.schema.js';
-import { Model } from 'mongoose';
+import mongoose, { Model, PipelineStage } from 'mongoose';
 import { HeliusService } from '../helius/helius.service.js';
-import { TokenHoldingMapper } from './token-holding.mapper.js';
-import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
 import { TransactionService } from '../transaction/transaction.service.js';
 import { WalletDocument } from '../wallet/schemas/wallet.schema.js';
+import { Decimal } from 'decimal.js';
+import { FindHoldingsDto } from './dto/find-holdings.dto.js';
 
 @Injectable()
 export class TokenHoldingService {
@@ -25,9 +25,15 @@ export class TokenHoldingService {
     );
     if (assets.total > 0) {
       const tokenHoldings = assets.items.map((asset) => {
+        const decimals = asset.token_info?.decimals || 0;
+
         return {
           mintAddress: asset.id,
-          balance: asset.token_info.balance,
+          balance: new Decimal(asset.token_info.balance)
+            .div(Math.pow(10, decimals))
+            .toNumber(),
+          pricePerToken: asset.token_info.price_info.price_per_token,
+          totalPrice: asset.token_info.price_info.total_price,
           name: asset.content.metadata?.name,
           icon: asset.content.files[0]?.cdn_uri || '',
           wallet: wallet._id,
@@ -43,19 +49,185 @@ export class TokenHoldingService {
     }
   }
 
-  async findWalletHoldings(paginationDto: PaginationDto, walletId: string) {
-    const paginatedResult = await PaginationService.paginate(
-      this.tokenHoldingModel,
-      paginationDto,
-      {
-        wallet: walletId,
-        balance: { $gt: 0 },
+  async findWalletHoldings(paginationDto: FindHoldingsDto, walletId: string) {
+    const today = new Date();
+    const fromDate = new Date(today);
+    fromDate.setDate(today.getDate() - paginationDto.period);
+
+    const matchStage = {
+      $match: {
+        $and: [
+          { wallet: new mongoose.Types.ObjectId(walletId) },
+          paginationDto.search
+            ? {
+                $or: [
+                  { name: { $regex: paginationDto.search, $options: 'i' } },
+                  {
+                    mintAddress: {
+                      $regex: paginationDto.search,
+                      $options: 'i',
+                    },
+                  },
+                ],
+              }
+            : {},
+        ],
       },
-    );
+    };
+
+    const aggregateStages: PipelineStage[] = [
+      matchStage,
+      {
+        $lookup: {
+          from: 'transactions',
+          let: {
+            mintAddress: '$mintAddress',
+            walletId: '$wallet',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$tradableTokenMint', '$$mintAddress'] },
+                    { $eq: ['$wallet', '$$walletId'] },
+                    { $gte: ['$date', fromDate] },
+                  ],
+                },
+              },
+            },
+            { $sort: { date: -1 } },
+          ],
+          as: 'transactions',
+        },
+      },
+      {
+        $addFields: {
+          dateLastTraded: { $first: '$transactions.date' },
+          betSize: {
+            $reduce: {
+              input: '$transactions',
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  {
+                    $cond: [
+                      { $eq: ['$$this.action', 'buy'] },
+                      { $ifNull: ['$$this.from.priceAmount', 0] },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          totalRevenue: {
+            $reduce: {
+              input: '$transactions',
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  {
+                    $cond: [
+                      { $eq: ['$$this.action', 'sell'] },
+                      { $ifNull: ['$$this.to.priceAmount', 0] },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          pnl: { $subtract: ['$totalRevenue', '$betSize'] },
+          roi: {
+            $cond: [
+              { $eq: ['$betSize', 0] },
+              0,
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $subtract: ['$totalRevenue', '$betSize'] },
+                      '$betSize',
+                    ],
+                  },
+                  100,
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          holdingsBalance: { $sum: '$totalPrice' },
+          holdings: { $push: '$$ROOT' },
+        },
+      },
+      {
+        $unwind: '$holdings',
+      },
+      {
+        $project: {
+          _id: '$holdings._id',
+          name: '$holdings.name',
+          wallet: '$holdings.wallet',
+          mintAddress: '$holdings.mintAddress',
+          totalPrice: '$holdings.totalPrice',
+          betSize: '$holdings.betSize',
+          totalRevenue: '$holdings.totalRevenue',
+          pnl: '$holdings.pnl',
+          roi: '$holdings.roi',
+          icon: '$holdings.icon',
+          dateLastTraded: '$holdings.dateLastTraded',
+          balanceMaxHoldings: {
+            $multiply: [
+              {
+                $divide: ['$holdings.totalPrice', '$holdingsBalance'],
+              },
+              100,
+            ],
+          },
+        },
+      },
+    ];
+
+    if (paginationDto.sort) {
+      const sortParam = {};
+      sortParam[paginationDto.sort.by] =
+        paginationDto.sort.order === 'asc' ? 1 : -1;
+      aggregateStages.push({
+        $sort: sortParam,
+      });
+    }
+
+    const skip = (paginationDto.page - 1) * paginationDto.limit;
+    aggregateStages.push({
+      $facet: {
+        paginatedResults: [{ $skip: skip }, { $limit: paginationDto.limit }],
+        totalCount: [{ $count: 'count' }],
+      },
+    });
+
+    const tokenHoldingsAggregate =
+      await this.tokenHoldingModel.aggregate(aggregateStages);
+
+    const tokenHoldings = tokenHoldingsAggregate[0].paginatedResults;
+    const total = tokenHoldingsAggregate[0].totalCount[0]?.count || 0;
 
     return {
-      ...paginatedResult,
-      items: paginatedResult.items.map(TokenHoldingMapper.toDto),
+      items: tokenHoldings,
+      total,
+      page: paginationDto.page,
+      limit: paginationDto.limit,
+      totalPages: Math.ceil(total / paginationDto.limit),
     };
   }
 

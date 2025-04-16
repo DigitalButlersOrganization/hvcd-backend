@@ -4,7 +4,7 @@ import { HeliusService } from '../helius/helius.service.js';
 import { PriceHistoryService } from '../price-history/price-history.service.js';
 import { InjectModel } from '@nestjs/mongoose';
 import { PriceHistory } from '../price-history/schemas/price-history.schema.js';
-import { Model } from 'mongoose';
+import mongoose, { Model, PipelineStage } from 'mongoose';
 import { TransactionService } from '../transaction/transaction.service.js';
 import { Wallet } from '../wallet/schemas/wallet.schema.js';
 import { TokenHolding } from '../token-holding/schemas/token-holding.schema.js';
@@ -14,6 +14,7 @@ import {
   Transaction,
   TransactionDocument,
 } from '../transaction/schemas/transaction.schema.js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Controller('test')
 @ApiTags('Test')
@@ -34,17 +35,19 @@ export class TestController {
     private readonly walletService: WalletService,
   ) {}
 
-  @Get('price-history')
+  @Get()
+  async test() {}
+
+  //@Cron(CronExpression.EVERY_MINUTE)
   async priceHistory() {
     const lastPrice = await this.priceHistoryModel.findOne().sort({ date: -1 });
     let start;
     if (!lastPrice) {
-      start = new Date('2025-01-01T00:00:00Z').getTime();
+      start = new Date('2024-10-01T00:00:00Z').getTime();
     } else {
       start = new Date(lastPrice.date).getTime();
     }
 
-    let allKlines = [];
     let next = true;
 
     while (next) {
@@ -55,7 +58,12 @@ export class TestController {
         start,
       );
 
-      allKlines = [...allKlines, ...klines];
+      const history = klines.map((kline) => ({
+        price: kline[1],
+        date: new Date(kline[0]),
+      }));
+
+      await this.priceHistoryModel.insertMany(history);
 
       if (klines.length < 1000) {
         next = false;
@@ -63,64 +71,137 @@ export class TestController {
         start = klines[klines.length - 1][0];
       }
     }
-
-    const history = allKlines.map((kline) => ({
-      price: kline[1],
-      date: new Date(kline[0]),
-    }));
-
-    await this.priceHistoryModel.insertMany(history);
   }
 
-  @Get()
-  async test() {
-    const wallet = '67fd6b5cd978c0289e6cb274';
+  //@Cron(CronExpression.EVERY_MINUTE)
+  async updateWalletAges() {
+    const stages: PipelineStage[] = [
+      {
+        $lookup: {
+          from: 'transactions',
+          localField: '_id',
+          foreignField: 'wallet',
+          as: 'transactions',
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          firstTransactionDate: { $min: '$transactions.date' },
+        },
+      },
+    ];
 
-    const txs: TransactionDocument[] = await this.transactionModel
-      .find({
-        wallet: wallet,
-      })
-      .sort({ date: 1 });
+    const walletsWithFirstTransactionDate =
+      await this.walletModel.aggregate(stages);
 
-    const mintTransactions = {};
-    for (const tx of txs) {
-      if (!mintTransactions[tx.tradableTokenMint]) {
-        mintTransactions[tx.tradableTokenMint] = {
-          totalBoughtUsd: 0,
-          totalSoldUsd: 0,
-          totalAmount: 0,
-          totalAmountUsd: 0,
-          sales: [],
-        };
-      }
+    const operations = [];
 
-      if (tx.action === 'buy') {
-        mintTransactions[tx.tradableTokenMint].totalAmount += tx.to.amount;
-        mintTransactions[tx.tradableTokenMint].totalAmountUsd +=
-          tx.to.priceAmount;
-        mintTransactions[tx.tradableTokenMint].totalBoughtUsd +=
-          tx.to.priceAmount;
-      } else if (tx.action === 'sell') {
-        let avgBuyPrice = 0;
+    for (const wallet of walletsWithFirstTransactionDate) {
+      operations.push({
+        updateOne: {
+          filter: { _id: wallet._id },
+          update: { $set: { creationDate: wallet.firstTransactionDate } },
+        },
+      });
+    }
 
-        if (mintTransactions[tx.tradableTokenMint].totalAmount > 0) {
-          avgBuyPrice =
-            mintTransactions[tx.tradableTokenMint].totalAmountUsd /
-            mintTransactions[tx.tradableTokenMint].totalAmount;
+    await this.walletModel.bulkWrite(operations);
+  }
+
+  //@Cron(CronExpression.EVERY_MINUTE)
+  async updateWinrates() {
+    const periods = [7, 30, 90, 180];
+    const sales = {};
+    const winrates = {};
+
+    for (const period of periods) {
+      const today = new Date();
+      const fromDate = new Date(today);
+      fromDate.setDate(today.getDate() - period);
+
+      const txs: TransactionDocument[] = await this.transactionModel
+        .find({
+          date: { $gte: fromDate },
+        })
+        .sort({ date: 1 });
+
+      for (const tx of txs) {
+        const walletId = tx.wallet.toString();
+
+        if (!sales[walletId]) {
+          sales[walletId] = {
+            sales: 0,
+            profitableSales: 0,
+            winrate: 0,
+          };
         }
-        const salePricePerCoin = tx.from.price;
-        const isProfitable = salePricePerCoin > avgBuyPrice;
-        mintTransactions[tx.tradableTokenMint].sales.push(isProfitable);
-        mintTransactions[tx.tradableTokenMint].totalAmount -= tx.from.amount;
-        mintTransactions[tx.tradableTokenMint].totalAmountUsd -=
-          tx.from.amount * avgBuyPrice;
-        mintTransactions[tx.tradableTokenMint].totalSoldUsd +=
-          tx.from.priceAmount;
+
+        if (!winrates[walletId]) {
+          winrates[walletId] = {
+            7: 0,
+            30: 0,
+            90: 0,
+            180: 0,
+          };
+        }
+
+        if (!sales[walletId][tx.tradableTokenMint]) {
+          sales[walletId][tx.tradableTokenMint] = {
+            totalBoughtUsd: 0,
+            totalSoldUsd: 0,
+            totalAmount: 0,
+            totalAmountUsd: 0,
+          };
+        }
+
+        const tokenData = sales[walletId][tx.tradableTokenMint];
+
+        if (tx.action === 'buy') {
+          tokenData.totalAmount += tx.to.amount;
+          tokenData.totalAmountUsd += tx.to.priceAmount;
+          tokenData.totalBoughtUsd += tx.to.priceAmount;
+        } else if (tx.action === 'sell') {
+          let avgBuyPrice = 0;
+
+          if (tokenData.totalAmount > 0) {
+            avgBuyPrice = tokenData.totalAmountUsd / tokenData.totalAmount;
+          }
+          const salePricePerCoin = tx.from.price;
+          sales[walletId].sales += 1;
+
+          if (salePricePerCoin > avgBuyPrice) {
+            sales[walletId].profitableSales += 1;
+          }
+
+          tokenData.totalAmount -= tx.from.amount;
+          tokenData.totalAmountUsd -= tx.from.amount * avgBuyPrice;
+          tokenData.totalSoldUsd += tx.from.priceAmount;
+          sales[walletId][tx.tradableTokenMint] = tokenData;
+
+          if (sales[walletId].profitableSales === 0) {
+            winrates[walletId][period] = 0;
+            sales[walletId].winrate = 0;
+          } else {
+            winrates[walletId][period] =
+              (sales[walletId].profitableSales / sales[walletId].sales) * 100;
+            sales[walletId].winrate =
+              (sales[walletId].profitableSales / sales[walletId].sales) * 100;
+          }
+        }
       }
     }
 
-    const holdings = await this.tokenHoldingModel.find({
-      wallet: wallet,
-    });
+    const operations = [];
+    for (const walletId in winrates) {
+      operations.push({
+        updateOne: {
+          filter: { _id: walletId },
+          update: { $set: { winrate: winrates[walletId] } },
+        },
+      });
+    }
+
+    await this.walletModel.bulkWrite(operations);
   }
 }

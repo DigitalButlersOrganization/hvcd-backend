@@ -1,6 +1,6 @@
 export enum SortParams {
   PNL = 'pnl',
   WINRATE = 'winrate',
-  AGE = 'age',
+  creationDate = 'creationDate',
   BALANCE = 'balance',
 }

@@ -1,10 +1,17 @@
 import { WalletDocument } from '../schemas/wallet.schema.js';
 
+enum SortParams {
+  PNL = 'pnl',
+  WINRATE = 'winrate',
+  creationDate = 'creationDate',
+  BALANCE = 'balance',
+}
+
 export class FindAllQueryDto {
   walletIds?: WalletDocument[];
-  period: number = 180;
+  period: number;
   sort?: {
-    by: string;
+    by: SortParams;
     order: 'asc' | 'desc';
   };
 }

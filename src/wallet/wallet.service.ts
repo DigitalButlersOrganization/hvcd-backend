@@ -10,6 +10,7 @@ import { TokenHoldingService } from '../token-holding/token-holding.service.js';
 import { FindAllQueryDto } from './dto/find-all-query.dto.js';
 import { FindOneQueryDto } from './dto/find-one-query.dto.js';
 import { AgendaService } from '../agenda/agenda.service.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 @Injectable()
 export class WalletService {
@@ -50,7 +51,7 @@ export class WalletService {
       wallet = await this.walletModel.create({
         publicAddress: walletAddress,
         creationDate: new Date(),
-        balance: balance,
+        balance: balance / LAMPORTS_PER_SOL,
       });
 
       await this.agendaService.scheduleTask('import-assets', wallet);
@@ -128,6 +129,7 @@ export class WalletService {
             publicAddress: '$publicAddress',
             creationDate: '$creationDate',
             balance: '$balance',
+            winrate: '$winrate',
           },
           totalSpent: {
             $sum: {
@@ -157,6 +159,7 @@ export class WalletService {
           balance: '$_id.balance',
           totalSpent: 1,
           totalRevenue: 1,
+          winrate: `$_id.winrate.${period}`,
           pnl: { $subtract: ['$totalRevenue', '$totalSpent'] },
           pnlPercentage: {
             $cond: [
@@ -245,6 +248,15 @@ export class WalletService {
         },
       },
       {
+        $lookup: {
+          from: 'tokenHoldings',
+          localField: '_id',
+          foreignField: 'wallet',
+          as: 'holdings',
+        },
+      },
+
+      {
         $unwind: {
           path: '$transactions',
           preserveNullAndEmptyArrays: true,
@@ -256,7 +268,10 @@ export class WalletService {
             walletId: '$_id',
             publicAddress: '$publicAddress',
             creationDate: '$creationDate',
-            balance: '$balance',
+            solanaBalance: { $multiply: ['$balance', 130] },
+            holdingsCount: { $size: '$holdings' },
+            winrate: '$winrate',
+            tokenBalance: { $sum: '$holdings.totalPrice' },
           },
           totalSpent: {
             $sum: {
@@ -283,27 +298,10 @@ export class WalletService {
           _id: '$_id.walletId',
           publicAddress: '$_id.publicAddress',
           creationDate: '$_id.creationDate',
-          balance: '$_id.balance',
-          totalSpent: 1,
-          totalRevenue: 1,
+          tokenTrades: '$_id.holdingsCount',
           pnl: { $subtract: ['$totalRevenue', '$totalSpent'] },
-          pnlPercentage: {
-            $cond: [
-              { $eq: ['$totalSpent', 0] },
-              0,
-              {
-                $multiply: [
-                  {
-                    $divide: [
-                      { $subtract: ['$totalRevenue', '$totalSpent'] },
-                      '$totalSpent',
-                    ],
-                  },
-                  100,
-                ],
-              },
-            ],
-          },
+          winrate: `$_id.winrate.${period}`,
+          balance: { $sum: ['$_id.solanaBalance', '$_id.tokenBalance'] },
         },
       },
     ];

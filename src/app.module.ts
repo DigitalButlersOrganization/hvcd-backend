@@ -14,6 +14,7 @@ import { TokenHoldingModule } from './token-holding/token-holding.module.js';
 import { PriceHistoryModule } from './price-history/price-history.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { AgendaModule } from './agenda/agenda.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AgendaModule } from './agenda/agenda.module.js';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserModule,
     OtpModule,
