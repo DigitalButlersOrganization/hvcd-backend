@@ -232,12 +232,114 @@ export class TokenHoldingService {
   }
 
   async findSpecificWalletHolding(walletId: string, holdingId: string) {
-    const holding = await this.tokenHoldingModel.findOne({
-      wallet: walletId,
-      _id: holdingId,
-    });
+    const holding = await this.tokenHoldingModel.aggregate([
+      {
+        $match: {
+          wallet: new mongoose.Types.ObjectId(walletId),
+          _id: new mongoose.Types.ObjectId(holdingId),
+        },
+      },
+      {
+        $lookup: {
+          from: 'transactions',
+          let: {
+            mintAddress: '$mintAddress',
+            walletId: '$wallet',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$tradableTokenMint', '$$mintAddress'] },
+                    { $eq: ['$wallet', '$$walletId'] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'transactions',
+        },
+      },
+      {
+        $addFields: {
+          totalBought: {
+            $reduce: {
+              input: '$transactions',
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  {
+                    $cond: [
+                      { $eq: ['$$this.action', 'buy'] },
+                      { $ifNull: ['$$this.from.priceAmount', 0] },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          totalSold: {
+            $reduce: {
+              input: '$transactions',
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  {
+                    $cond: [
+                      { $eq: ['$$this.action', 'sell'] },
+                      { $ifNull: ['$$this.to.priceAmount', 0] },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          pnl: { $subtract: ['$totalSold', '$totalBought'] },
+          roi: {
+            $cond: [
+              { $eq: ['$totalBought', 0] },
+              0,
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $subtract: ['$totalSold', '$totalBought'] },
+                      '$totalBought',
+                    ],
+                  },
+                  100,
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          wallet: 1,
+          mintAddress: 1,
+          name: 1,
+          totalPrice: 1,
+          icon: 1,
+          pnl: 1,
+          roi: 1,
+          totalBought: 1,
+          totalSold: 1,
+        },
+      },
+    ]);
 
-    return holding;
+    return holding[0];
   }
 
   async getHoldingsTransactions(

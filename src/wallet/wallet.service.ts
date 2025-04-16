@@ -102,6 +102,14 @@ export class WalletService {
         },
       },
       {
+        $lookup: {
+          from: 'tokenHoldings',
+          localField: '_id',
+          foreignField: 'wallet',
+          as: 'holdings',
+        },
+      },
+      {
         $unwind: {
           path: '$transactions',
           preserveNullAndEmptyArrays: true,
@@ -128,8 +136,10 @@ export class WalletService {
             walletId: '$_id',
             publicAddress: '$publicAddress',
             creationDate: '$creationDate',
-            balance: '$balance',
+            balance: { $multiply: ['$balance', 130] },
             winrate: '$winrate',
+            totalHoldingsPrice: '$totalHoldingsPrice',
+            tokenBalance: { $sum: '$holdings.totalPrice' },
           },
           totalSpent: {
             $sum: {
@@ -156,7 +166,7 @@ export class WalletService {
           _id: '$_id.walletId',
           publicAddress: '$_id.publicAddress',
           creationDate: '$_id.creationDate',
-          balance: '$_id.balance',
+          balance: { $sum: ['$_id.balance', '$_id.tokenBalance'] },
           totalSpent: 1,
           totalRevenue: 1,
           winrate: `$_id.winrate.${period}`,
@@ -200,7 +210,7 @@ export class WalletService {
     const walletsAggregate = await this.walletModel.aggregate(stages);
     const wallets = walletsAggregate[0].paginatedResults;
     const total = walletsAggregate[0].totalCount[0]?.count || 0;
-
+    console.log(wallets);
     return {
       items: wallets,
       total,

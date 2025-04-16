@@ -144,7 +144,7 @@ export class UserWalletService {
     }
 
     if (findQueryDto.period) {
-      findQueryDto.period = findAllQuery.period;
+      findAllQuery.period = findQueryDto.period;
     }
 
     const walletResult = await this.walletService.findAll(
@@ -214,11 +214,7 @@ export class UserWalletService {
 
     // TODO calculate
     return {
-      ...holding.toObject(),
-      totalBought: 1000,
-      totalSold: 1000,
-      pnl: 1000,
-      pnlPercent: 100,
+      ...holding,
       betSize: 'Medium',
     };
   }
