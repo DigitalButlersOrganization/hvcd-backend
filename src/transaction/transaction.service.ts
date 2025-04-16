@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { ITransaction } from '../helius/interfaces/transaction.interface.js';
 import { PriceHistoryService } from '../price-history/price-history.service.js';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +11,7 @@ import { WalletDocument } from '../wallet/schemas/wallet.schema.js';
 import { sleep } from '@nestjs/terminus/dist/utils/index.js';
 import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
+import { transactions } from '@metaplex/js';
 
 @Injectable()
 export class TransactionService {
@@ -125,16 +126,42 @@ export class TransactionService {
   async getByMintAndWallet(
     walletId: string,
     mint: string,
+    supply: number,
     paginationDto: PaginationDto,
   ) {
-    return await PaginationService.paginate(
-      this.transactionModel,
-      paginationDto,
+    const transactions = await this.transactionModel.aggregate([
       {
-        wallet: walletId,
-        $or: [{ 'from.mint': mint }, { 'to.mint': mint }],
+        $match: {
+          $and: [
+            { wallet: new mongoose.Types.ObjectId(walletId) },
+            {
+              $or: [{ 'from.mint': mint }, { 'to.mint': mint }],
+            },
+          ],
+        },
       },
-    );
+      {
+        $project: {
+          signature: 1,
+          date: 1,
+          action: 1,
+          amount: '$to.priceAmount',
+          balanceMaxHoldings: {
+            $multiply: [
+              {
+                $divide: [
+                  { $toDouble: '$to.priceAmount' },
+                  { $toDouble: supply },
+                ],
+              },
+              100,
+            ],
+          },
+        },
+      },
+    ]);
+
+    return transactions;
   }
 
   private async getTradeData(transaction: ITransaction) {

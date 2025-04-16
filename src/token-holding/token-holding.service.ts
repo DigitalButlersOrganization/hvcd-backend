@@ -32,6 +32,9 @@ export class TokenHoldingService {
           balance: new Decimal(asset.token_info.balance)
             .div(Math.pow(10, decimals))
             .toNumber(),
+          supply: new Decimal(asset.token_info.supply)
+            .div(Math.pow(10, decimals))
+            .toNumber(),
           pricePerToken: asset.token_info.price_info?.price_per_token || 0,
           totalPrice: asset.token_info.price_info?.total_price || 0,
           name: asset.content.metadata?.name,
@@ -187,10 +190,15 @@ export class TokenHoldingService {
           roi: '$holdings.roi',
           icon: '$holdings.icon',
           dateLastTraded: '$holdings.dateLastTraded',
+          balance: '$holdings.balance',
+          supply: '$holdings.supply',
           balanceMaxHoldings: {
             $multiply: [
               {
-                $divide: ['$holdings.totalPrice', '$holdingsBalance'],
+                $divide: [
+                  { $toDouble: '$holdings.balance' },
+                  { $toDouble: '$holdings.supply' },
+                ],
               },
               100,
             ],
@@ -221,7 +229,7 @@ export class TokenHoldingService {
 
     const tokenHoldings = tokenHoldingsAggregate[0].paginatedResults;
     const total = tokenHoldingsAggregate[0].totalCount[0]?.count || 0;
-
+    console.log(tokenHoldings);
     return {
       items: tokenHoldings,
       total,
@@ -359,8 +367,18 @@ export class TokenHoldingService {
     const transactions = await this.transactionService.getByMintAndWallet(
       walletId,
       holding.mintAddress,
+      holding.supply,
       paginationDto,
     );
+
+    // const transactionItems = transactions.items.map((transaction) => {
+    //   return {
+    //     signature: transaction.signature,
+    //     date: transaction.date,
+    //     action: transaction.action,
+    //     amount: transaction.to.priceAmount,
+    //   };
+    // });
 
     return transactions;
   }

@@ -38,7 +38,7 @@ export class TestController {
   @Get()
   async test() {}
 
-  //@Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async priceHistory() {
     const lastPrice = await this.priceHistoryModel.findOne().sort({ date: -1 });
     let start;
@@ -73,7 +73,7 @@ export class TestController {
     }
   }
 
-  //@Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async updateWalletAges() {
     const stages: PipelineStage[] = [
       {
@@ -109,7 +109,7 @@ export class TestController {
     await this.walletModel.bulkWrite(operations);
   }
 
-  //@Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async updateWinrates() {
     const periods = [7, 30, 90, 180];
     const sales = {};

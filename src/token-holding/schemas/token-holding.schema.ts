@@ -23,6 +23,9 @@ export class TokenHolding {
   @Prop({ required: true })
   totalPrice: number;
 
+  @Prop({ required: true })
+  supply: number;
+
   @Prop()
   name: string;
 
