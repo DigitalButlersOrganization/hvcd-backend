@@ -94,7 +94,16 @@ export class TransactionService {
         }
       }
 
-      await this.transactionModel.insertMany(swapTransactions);
+      await this.transactionModel.bulkWrite(
+        swapTransactions.map((transaction) => ({
+          updateOne: {
+            filter: { signature: transaction.signature },
+            update: { $setOnInsert: transaction },
+            upsert: true,
+          },
+        })),
+        { ordered: false },
+      );
 
       wallet.importStatus.lastTransaction =
         transactions[transactions.length - 1].signature;
