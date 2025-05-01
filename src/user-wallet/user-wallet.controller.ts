@@ -160,6 +160,7 @@ export class UserWalletController {
   }
 
   @Post(':id/holdings/:holdingId/transactions')
+  @HttpCode(HttpStatus.OK)
   async getHoldingsTransactions(
     @Param('id') id: string,
     @Param('holdingId') holdingId: string,

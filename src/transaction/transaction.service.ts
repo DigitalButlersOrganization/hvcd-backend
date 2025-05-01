@@ -140,6 +140,9 @@ export class TransactionService {
   ) {
     const skip = (paginationDto.page - 1) * paginationDto.limit;
 
+    // Убедимся, что supply не равен нулю, иначе установим его на 1
+    const safeSupply = supply && supply > 0 ? supply : 1;
+
     const transactions = await this.transactionModel.aggregate([
       {
         $match: {
@@ -157,12 +160,13 @@ export class TransactionService {
           date: 1,
           action: 1,
           amount: '$to.priceAmount',
+          marketCap: 1,
           balanceMaxHoldings: {
             $multiply: [
               {
                 $divide: [
                   { $toDouble: '$to.priceAmount' },
-                  { $toDouble: supply },
+                  { $toDouble: safeSupply },
                 ],
               },
               100,
