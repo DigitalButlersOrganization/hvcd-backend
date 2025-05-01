@@ -176,7 +176,7 @@ export class WalletService {
           pnlPercentage: {
             $cond: [
               { $eq: ['$totalSpent', 0] },
-              0,
+              100,
               {
                 $multiply: [
                   {
