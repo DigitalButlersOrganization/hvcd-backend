@@ -9,7 +9,9 @@ describe('TransactionMarketCapService', () => {
       providers: [TransactionMarketCapService],
     }).compile();
 
-    service = module.get<TransactionMarketCapService>(TransactionMarketCapService);
+    service = module.get<TransactionMarketCapService>(
+      TransactionMarketCapService,
+    );
   });
 
   it('should be defined', () => {

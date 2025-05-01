@@ -49,7 +49,6 @@ export class TestController {
   @Get()
   async test() {
     await this.transactionMarketCupService.setTransactionsMarketCap();
-
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
