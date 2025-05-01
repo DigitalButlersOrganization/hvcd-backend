@@ -82,10 +82,18 @@ export class TokenHoldingService {
       const assets =
         await this.heliusService.getAssetBatch(nullableAccountsIds);
       const assetsData = assets.reduce((acc, asset) => {
+        const decimals = asset.token_info?.decimals || 0;
+        ids.push(asset.id);
+
         acc[asset.id] = {
           name: asset.content.metadata?.name?.toLowerCase(),
           icon: asset.content.files[0]?.uri || '',
           symbol: asset.content.metadata?.symbol?.toLowerCase(),
+          supply: new Decimal(asset.token_info.supply)
+            .div(Math.pow(10, decimals))
+            .toNumber(),
+          pricePerToken: asset.token_info.price_info?.price_per_token || 0,
+          totalPrice: asset.token_info.price_info?.total_price || 0,
         };
 
         return acc;
@@ -98,9 +106,9 @@ export class TokenHoldingService {
           return {
             mintAddress: mint,
             balance: 0,
-            supply: 0,
-            pricePerToken: 0,
-            totalPrice: 0,
+            supply: assetsData[mint].supply,
+            pricePerToken: assetsData[mint].pricePerToken,
+            totalPrice: assetsData[mint].totalPrice,
             name: assetsData[mint]?.name || '',
             icon: assetsData[mint]?.icon || '',
             wallet: wallet._id,
