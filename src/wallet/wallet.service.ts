@@ -42,14 +42,14 @@ export class WalletService {
     });
   }
 
-  async findOrCreate(walletAddress: string): Promise<WalletDto> {
-    let wallet = await this.walletModel.findOne({ walletAddress });
+  async findOrCreate(publicAddress: string): Promise<WalletDto> {
+    let wallet = await this.walletModel.findOne({ publicAddress });
 
     if (!wallet) {
-      const balance = await this.heliusService.getBalance(walletAddress);
+      const balance = await this.heliusService.getBalance(publicAddress);
 
       wallet = await this.walletModel.create({
-        publicAddress: walletAddress,
+        publicAddress: publicAddress,
         creationDate: new Date(),
         balance: balance / LAMPORTS_PER_SOL,
       });

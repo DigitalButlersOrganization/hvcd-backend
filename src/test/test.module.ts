@@ -19,6 +19,7 @@ import {
   TokenHoldingSchema,
 } from '../token-holding/schemas/token-holding.schema.js';
 import { WalletModule } from '../wallet/wallet.module.js';
+import { FacadeModule } from '../facade/facade.module.js';
 
 @Module({
   controllers: [TestController],
@@ -33,6 +34,7 @@ import { WalletModule } from '../wallet/wallet.module.js';
     PriceHistoryModule,
     TransactionModule,
     WalletModule,
+    FacadeModule,
   ],
 })
 export class TestModule {}

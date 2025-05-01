@@ -15,11 +15,15 @@ import {
   TransactionDocument,
 } from '../transaction/schemas/transaction.schema.js';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { CoinGeckoClient } from 'coingecko-api-v3';
+import { TransactionMarketCapService } from '../facade/transaction-market-cap/transaction-market-cap.service.js';
 
 @Controller('test')
 @ApiTags('Test')
 @Injectable()
 export class TestController {
+  private readonly client: CoinGeckoClient;
+
   constructor(
     private readonly heliusService: HeliusService,
     private readonly priceHistoryService: PriceHistoryService,
@@ -33,10 +37,20 @@ export class TestController {
     private readonly tokenHoldingModel: Model<TokenHolding>,
     private readonly configService: ConfigService,
     private readonly walletService: WalletService,
-  ) {}
+    private readonly transactionMarketCupService: TransactionMarketCapService,
+  ) {
+    this.client = new CoinGeckoClient({
+      timeout: 10000,
+      autoRetry: true,
+    });
+  }
 
+  //16987
   @Get()
-  async test() {}
+  async test() {
+    await this.transactionMarketCupService.setTransactionsMarketCap();
+
+  }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async priceHistory() {

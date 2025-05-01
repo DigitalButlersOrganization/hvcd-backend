@@ -18,14 +18,20 @@ export class TokenHoldingService {
     private readonly transactionService: TransactionService,
   ) {}
 
-  async importAssets(wallet: WalletDocument, page: number = 1) {
+  async importAssets(
+    wallet: WalletDocument,
+    page: number = 1,
+    ids: string[] = [],
+  ) {
     const assets = await this.heliusService.getAssets(
       wallet.publicAddress,
       page,
     );
+
     if (assets.total > 0) {
       const tokenHoldings = assets.items.map((asset) => {
         const decimals = asset.token_info?.decimals || 0;
+        ids.push(asset.id);
 
         return {
           mintAddress: asset.id,
@@ -37,10 +43,11 @@ export class TokenHoldingService {
             .toNumber(),
           pricePerToken: asset.token_info.price_info?.price_per_token || 0,
           totalPrice: asset.token_info.price_info?.total_price || 0,
-          name: asset.content.metadata?.name,
+          name: asset.content.metadata?.name?.toLowerCase(),
           icon: asset.content.files[0]?.cdn_uri || '',
           wallet: wallet._id,
           owner: asset.ownership.owner,
+          symbol: asset.content.metadata?.symbol?.toLowerCase(),
         };
       });
 
@@ -48,7 +55,64 @@ export class TokenHoldingService {
     }
 
     if (assets.total === 1000) {
-      await this.importAssets(wallet, ++page);
+      await this.importAssets(wallet, ++page, ids);
+    }
+
+    const accountsData = await this.heliusService.getTokenAccountsByOwner(
+      wallet.publicAddress,
+    );
+
+    if (accountsData.value.length) {
+      const accounts = accountsData.value;
+      const nullableAccountsIds = [];
+
+      const nullableBalanceAccounts = accounts.filter((accountData) => {
+        const mint = accountData.account.data.parsed.info.mint;
+        const include =
+          !ids.includes(mint) &&
+          accountData.account.data.program === 'spl-token';
+
+        if (include) {
+          nullableAccountsIds.push(mint);
+        }
+
+        return include;
+      });
+
+      const assets =
+        await this.heliusService.getAssetBatch(nullableAccountsIds);
+      const assetsData = assets.reduce((acc, asset) => {
+        acc[asset.id] = {
+          name: asset.content.metadata?.name?.toLowerCase(),
+          icon: asset.content.files[0]?.uri || '',
+          symbol: asset.content.metadata?.symbol?.toLowerCase(),
+        };
+
+        return acc;
+      }, {});
+
+      const nullableTokenHoldings = nullableBalanceAccounts.map(
+        (accountData) => {
+          const mint = accountData.account.data.parsed.info.mint;
+
+          return {
+            mintAddress: mint,
+            balance: 0,
+            supply: 0,
+            pricePerToken: 0,
+            totalPrice: 0,
+            name: assetsData[mint]?.name || '',
+            icon: assetsData[mint]?.icon || '',
+            wallet: wallet._id,
+            owner: accountData.account.data.parsed.info.owner,
+            symbol: assetsData[mint]?.symbol || '',
+          };
+        },
+      );
+
+      if (nullableTokenHoldings.length) {
+        await this.tokenHoldingModel.insertMany(nullableTokenHoldings);
+      }
     }
   }
 
@@ -150,14 +214,24 @@ export class TokenHoldingService {
           pnl: { $subtract: ['$totalRevenue', '$betSize'] },
           roi: {
             $cond: [
-              { $eq: ['$betSize', 0] },
+              {
+                $or: [
+                  { $eq: [{ $ifNull: ['$betSize', 0] }, 0] },
+                  { $eq: ['$betSize', null] },
+                ],
+              },
               0,
               {
                 $multiply: [
                   {
                     $divide: [
-                      { $subtract: ['$totalRevenue', '$betSize'] },
-                      '$betSize',
+                      {
+                        $subtract: [
+                          { $ifNull: ['$totalRevenue', 0] },
+                          { $ifNull: ['$betSize', 0] },
+                        ],
+                      },
+                      { $ifNull: ['$betSize', 0] },
                     ],
                   },
                   100,
@@ -193,14 +267,30 @@ export class TokenHoldingService {
           balance: '$holdings.balance',
           supply: '$holdings.supply',
           balanceMaxHoldings: {
-            $multiply: [
+            $cond: [
               {
-                $divide: [
-                  { $toDouble: '$holdings.balance' },
-                  { $toDouble: '$holdings.supply' },
+                $or: [
+                  {
+                    $eq: [
+                      { $ifNull: [{ $toDouble: '$holdings.supply' }, 0] },
+                      0,
+                    ],
+                  },
+                  { $eq: ['$holdings.supply', null] },
                 ],
               },
-              100,
+              0,
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $toDouble: { $ifNull: ['$holdings.balance', 0] } },
+                      { $toDouble: { $ifNull: ['$holdings.supply', 0] } },
+                    ],
+                  },
+                  100,
+                ],
+              },
             ],
           },
         },
@@ -314,14 +404,24 @@ export class TokenHoldingService {
           pnl: { $subtract: ['$totalSold', '$totalBought'] },
           roi: {
             $cond: [
-              { $eq: ['$totalBought', 0] },
+              {
+                $or: [
+                  { $eq: [{ $ifNull: ['$totalBought', 0] }, 0] },
+                  { $eq: ['$totalBought', null] },
+                ],
+              },
               0,
               {
                 $multiply: [
                   {
                     $divide: [
-                      { $subtract: ['$totalSold', '$totalBought'] },
-                      '$totalBought',
+                      {
+                        $subtract: [
+                          { $ifNull: ['$totalSold', 0] },
+                          { $ifNull: ['$totalBought', 0] },
+                        ],
+                      },
+                      { $ifNull: ['$totalBought', 0] },
                     ],
                   },
                   100,
@@ -343,6 +443,7 @@ export class TokenHoldingService {
           roi: 1,
           totalBought: 1,
           totalSold: 1,
+          marketCap: { $multiply: ['$pricePerToken', '$supply'] },
         },
       },
     ]);
@@ -364,17 +465,43 @@ export class TokenHoldingService {
       throw new NotFoundException('Holding not found');
     }
 
-    const transactions = await this.transactionService.getByMintAndWallet(
+    return await this.transactionService.getByMintAndWallet(
       walletId,
       holding.mintAddress,
       holding.supply,
       paginationDto,
     );
-
-    return transactions;
   }
 
   async getTokensCountByWallet(wallet: string) {
     return this.tokenHoldingModel.countDocuments({ wallet });
+  }
+
+  async getGroupHoldingsByMints(mints: string[]) {
+    return this.tokenHoldingModel.aggregate([
+      {
+        $match: {
+          mintAddress: { $in: mints },
+        },
+      },
+      {
+        $group: {
+          _id: '$mintAddress',
+          doc: { $first: '$$ROOT' },
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: '$doc',
+        },
+      },
+      {
+        $project: {
+          symbol: 1,
+          mintAddress: 1,
+          name: 1,
+        },
+      },
+    ]);
   }
 }

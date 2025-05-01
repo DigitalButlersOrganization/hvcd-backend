@@ -58,6 +58,9 @@ export class Transaction {
 
   @Prop()
   tradableTokenMint: string;
+
+  @Prop({ default: null })
+  marketCap: number;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

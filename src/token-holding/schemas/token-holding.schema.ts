@@ -38,6 +38,9 @@ export class TokenHolding {
 
   @Prop()
   icon: string;
+
+  @Prop()
+  symbol: string;
 }
 
 export const TokenHoldingSchema = SchemaFactory.createForClass(TokenHolding);

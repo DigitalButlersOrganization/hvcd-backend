@@ -15,6 +15,9 @@ import { PriceHistoryModule } from './price-history/price-history.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { AgendaModule } from './agenda/agenda.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MarketCapModule } from './market-cap/market-cap.module.js';
+import { TaskModule } from './task/task.module.js';
+import { FacadeModule } from './facade/facade.module.js';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     FeedModule,
     TestModule,
     AgendaModule,
+    MarketCapModule,
+    TaskModule,
+    FacadeModule,
   ],
   controllers: [],
   providers: [],

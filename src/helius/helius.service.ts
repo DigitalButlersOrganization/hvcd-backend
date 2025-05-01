@@ -102,6 +102,12 @@ export class HeliusService {
     });
   }
 
+  async getAssetBatch(ids: string[]) {
+    return await this.post('getAssetBatch', {
+      ids: ids,
+    });
+  }
+
   async getAllAssetsByOwner(wallet: string) {
     let assets = [];
     let page = 1;

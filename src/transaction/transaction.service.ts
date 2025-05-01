@@ -8,14 +8,15 @@ import { HeliusService } from '../helius/helius.service.js';
 import { TransactionActions } from './enums/transaction-actions.enum.js';
 import { Transaction } from './schemas/transaction.schema.js';
 import { WalletDocument } from '../wallet/schemas/wallet.schema.js';
-import { sleep } from '@nestjs/terminus/dist/utils/index.js';
-import { PaginationService } from '../shared/services/pagintation.service.js';
 import { PaginationDto } from '../shared/dto/pagination.dto.js';
-import { transactions } from '@metaplex/js';
 
 @Injectable()
 export class TransactionService {
   private readonly solanaMint: string;
+  private readonly sixMonths = 6;
+  private readonly initialRetryDelayMs = 500;
+  private readonly maxRetryDelayMs = 10000;
+  private readonly iterationPauseMs = 100;
 
   constructor(
     @InjectModel(Transaction.name)
@@ -50,77 +51,85 @@ export class TransactionService {
     return this.transactionModel.find({ user: userId });
   }
 
-  async importTransactions(wallet: WalletDocument) {
-    try {
-      const transactions: ITransaction[] =
-        await this.heliusService.getTransactions(
-          wallet.publicAddress,
-          wallet.importStatus.lastTransaction,
-        );
+  async importTransactions(wallet: WalletDocument): Promise<void> {
+    let retryDelay = this.initialRetryDelayMs;
 
-      if (!transactions.length) {
-        wallet.importStatus.isImporting = false;
-        wallet.importStatus.done = true;
-        await wallet.save();
-        return;
-      }
-
-      const lastTransactionDate = new Date(transactions[0].timestamp * 1000);
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-      if (lastTransactionDate < sixMonthsAgo) {
-        wallet.importStatus.isImporting = false;
-        wallet.importStatus.done = true;
-        await wallet.save();
-        return;
-      }
-
-      const swapTransactions = [];
-
-      for (const transaction of transactions) {
-        if (
-          transaction.type === 'SWAP' &&
-          transaction.tokenTransfers.length > 1 &&
-          transaction.tokenTransfers.length <= 3
-        ) {
-          const formatedTransaction = await this.formatTransaction(
-            transaction,
-            wallet,
+    while (true) {
+      try {
+        const transactions: ITransaction[] =
+          await this.heliusService.getTransactions(
+            wallet.publicAddress,
+            wallet.importStatus.lastTransaction,
           );
 
-          if (formatedTransaction) {
-            swapTransactions.push(formatedTransaction);
-          }
+        if (!transactions.length) {
+          wallet.importStatus.isImporting = false;
+          wallet.importStatus.done = true;
+          await wallet.save();
+          break;
         }
-      }
 
-      await this.transactionModel.bulkWrite(
-        swapTransactions.map((transaction) => ({
-          updateOne: {
-            filter: { signature: transaction.signature },
-            update: { $setOnInsert: transaction },
-            upsert: true,
-          },
-        })),
-        { ordered: false },
-      );
+        const lastTransactionDate = new Date(transactions[0].timestamp * 1000);
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - this.sixMonths);
 
-      wallet.importStatus.lastTransaction =
-        transactions[transactions.length - 1].signature;
-      wallet.importStatus.lastUpdatingAt = new Date();
-      await wallet.save();
-      await this.importTransactions(wallet);
-    } catch (e) {
-      wallet.importStatus.isImporting = false;
-      await wallet.save();
-      if (e.status === HttpStatus.TOO_MANY_REQUESTS) {
-        await sleep(500);
-        await this.importTransactions(wallet);
-      } else {
+        if (lastTransactionDate < sixMonthsAgo) {
+          wallet.importStatus.isImporting = false;
+          wallet.importStatus.done = true;
+          await wallet.save();
+          break;
+        }
+
+        const swapTransactions = (
+          await Promise.all(
+            transactions
+              .filter(
+                (tx) =>
+                  tx.type === 'SWAP' &&
+                  tx.tokenTransfers.length > 1 &&
+                  tx.tokenTransfers.length <= 3,
+              )
+              .map((tx) => this.formatTransaction(tx, wallet)),
+          )
+        ).filter((tx) => tx !== null);
+
+        if (swapTransactions.length > 0) {
+          await this.transactionModel.bulkWrite(
+            swapTransactions.map((transaction) => ({
+              updateOne: {
+                filter: { signature: transaction.signature },
+                update: { $setOnInsert: transaction },
+                upsert: true,
+              },
+            })),
+            { ordered: false },
+          );
+        }
+
+        wallet.importStatus.lastTransaction =
+          transactions[transactions.length - 1].signature;
+        wallet.importStatus.lastUpdatingAt = new Date();
+        await wallet.save();
+
+        await this.sleep(this.iterationPauseMs);
+      } catch (e) {
+        wallet.importStatus.isImporting = false;
+        await wallet.save();
+        if (e.status === HttpStatus.TOO_MANY_REQUESTS) {
+          const retryAfter = e.headers?.['retry-after'];
+          await this.sleep(
+            retryAfter ? parseInt(retryAfter) * 1000 : retryDelay,
+          );
+          retryDelay = Math.min(retryDelay * 2, this.maxRetryDelayMs);
+          continue;
+        }
         throw e;
       }
     }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async getByMintAndWallet(
@@ -178,6 +187,22 @@ export class TransactionService {
       limit: paginationDto.limit,
       totalPages: Math.ceil(total / paginationDto.limit),
     };
+  }
+
+  async getTransactionsWithoutMarketCup() {
+    return this.transactionModel
+      .find({
+        $or: [
+          { marketCap: null },
+          { marketCap: { $exists: false } },
+          { marketCap: '' },
+        ],
+      })
+      .sort({ createdAt: -1 });
+  }
+
+  async bulkUpdate(operations) {
+    return await this.transactionModel.bulkWrite(operations);
   }
 
   private async getTradeData(transaction: ITransaction) {
