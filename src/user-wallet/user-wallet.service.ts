@@ -240,6 +240,10 @@ export class UserWalletService {
   }
 
   private getWalletAge(creationDate: string) {
+    if (!creationDate) {
+      return null;
+    }
+
     const targetDate = new Date(creationDate);
     const currentDate = new Date();
     const diffTime = currentDate.getTime() - targetDate.getTime();

@@ -102,7 +102,7 @@ export class TestController {
     }
   }
 
-  //@Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async priceHistory() {
     const lastPrice = await this.priceHistoryModel.findOne().sort({ date: -1 });
     let start;
