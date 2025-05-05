@@ -46,7 +46,7 @@ export class TestController {
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
-  async test() {
+  async updateTransactionMarketCap() {
     const wallets = await this.walletModel.find({
       'importStatus.done': true,
     });
@@ -176,10 +176,10 @@ export class TestController {
   @Cron(CronExpression.EVERY_MINUTE)
   async updateWinrates() {
     const periods = [7, 30, 90, 180];
-    const sales = {};
     const winrates = {};
 
     for (const period of periods) {
+      const sales = {};
       const today = new Date();
       const fromDate = new Date(today);
       fromDate.setDate(today.getDate() - period);
