@@ -134,6 +134,7 @@ export class UserWalletService {
         name: userWallet.name,
         pnl: {},
         winrate: {},
+        import: false,
       };
     });
     const findAllQuery = new FindAllQueryDto();
@@ -163,6 +164,7 @@ export class UserWalletService {
         value: wallet.pnl,
       };
       userWallet.winrate = wallet.winrate;
+      userWallet.import = !wallet.importStatus.done;
 
       return userWallet;
     });

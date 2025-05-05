@@ -61,6 +61,12 @@ export class Transaction {
 
   @Prop({ default: null })
   marketCap: number;
+
+  @Prop()
+  pnl: number;
+
+  @Prop()
+  roi: number;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

@@ -142,6 +142,7 @@ export class WalletService {
             winrate: '$winrate',
             totalHoldingsPrice: '$totalHoldingsPrice',
             tokenBalance: { $sum: '$holdings.totalPrice' },
+            importStatus: '$importStatus',
           },
           totalSpent: {
             $sum: {
@@ -172,6 +173,7 @@ export class WalletService {
           totalSpent: 1,
           totalRevenue: 1,
           winrate: `$_id.winrate.${period}`,
+          importStatus: '$_id.importStatus',
           pnl: { $subtract: ['$totalRevenue', '$totalSpent'] },
           pnlPercentage: {
             $cond: [

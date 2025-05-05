@@ -45,13 +45,64 @@ export class TestController {
     });
   }
 
-  //16987
-  @Get()
+  @Cron(CronExpression.EVERY_MINUTE)
   async test() {
-    await this.transactionMarketCupService.setTransactionsMarketCap();
+    const wallets = await this.walletModel.find({
+      'importStatus.done': true,
+    });
+
+    const walletIds = wallets.map((wallet) => wallet.id);
+
+    const tokenHoldings = await this.tokenHoldingModel.find({
+      wallet: {
+        $in: walletIds,
+      },
+    });
+
+    for (const tokenHolding of tokenHoldings) {
+      const operations = [];
+      const transactions = await this.transactionModel
+        .find({
+          tradableTokenMint: tokenHolding.mintAddress,
+          wallet: tokenHolding.wallet,
+        })
+        .sort({ date: 1 });
+
+      let currentBetSize = 0;
+      let currentRevenue = 0;
+
+      transactions.map((transaction) => {
+        if (transaction.action === 'buy') {
+          currentBetSize += transaction.from.priceAmount || 0;
+        } else if (transaction.action === 'sell') {
+          currentRevenue += transaction.to.priceAmount || 0;
+        }
+
+        const transactionPnl = currentRevenue - currentBetSize;
+        const transactionRoi = currentBetSize
+          ? (transactionPnl / currentBetSize) * 100
+          : 100;
+
+        operations.push({
+          updateOne: {
+            filter: { _id: transaction.id },
+            update: {
+              $set: {
+                pnl: transactionPnl,
+                roi: transactionRoi,
+              },
+            },
+          },
+        });
+      });
+
+      if (operations.length) {
+        await this.transactionModel.bulkWrite(operations);
+      }
+    }
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  //@Cron(CronExpression.EVERY_MINUTE)
   async priceHistory() {
     const lastPrice = await this.priceHistoryModel.findOne().sort({ date: -1 });
     let start;
