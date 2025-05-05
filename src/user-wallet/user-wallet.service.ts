@@ -120,10 +120,19 @@ export class UserWalletService {
       ],
     };
 
-    const userWallets = await this.userWalletModel.find({
-      user: userId,
-      ...searchQuery,
-    });
+    const userWallets = await this.userWalletModel
+      .find({
+        user: userId,
+        ...searchQuery,
+      })
+      .sort(
+        findQueryDto.sort
+          ? {
+              [findQueryDto.sort.by]:
+                findQueryDto.sort.order === 'asc' ? 1 : -1,
+            }
+          : {},
+      );
 
     const walletIds = [];
     const userWalletsFormating = {};
@@ -137,6 +146,7 @@ export class UserWalletService {
         import: false,
       };
     });
+
     const findAllQuery = new FindAllQueryDto();
     findAllQuery.walletIds = walletIds;
 
@@ -153,6 +163,14 @@ export class UserWalletService {
       page,
       limit,
     );
+
+    if (findQueryDto.sort.by === 'name') {
+      walletResult.items = walletIds.map((id) => {
+        return walletResult.items.find((wallet) => {
+          return wallet._id.toString() === id.toString();
+        });
+      });
+    }
 
     walletResult.items = walletResult.items.map((wallet) => {
       const userWallet = userWalletsFormating[wallet._id];

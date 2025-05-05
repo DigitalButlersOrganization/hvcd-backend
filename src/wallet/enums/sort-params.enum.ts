@@ -3,4 +3,5 @@ export enum SortParams {
   WINRATE = 'winrate',
   creationDate = 'creationDate',
   BALANCE = 'balance',
+  NAME = 'name',
 }
