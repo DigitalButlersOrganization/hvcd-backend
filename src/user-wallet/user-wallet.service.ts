@@ -178,7 +178,7 @@ export class UserWalletService {
       userWallet['balance'] = wallet.balance;
       userWallet.creationDate = this.getWalletAge(wallet.creationDate);
       userWallet.pnl = {
-        percent: wallet.pnl ? wallet.pnlPercentage : 0,
+        percent: wallet.pnlPercentage,
         value: wallet.pnl,
       };
       userWallet.winrate = wallet.winrate;

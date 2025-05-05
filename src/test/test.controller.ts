@@ -81,7 +81,7 @@ export class TestController {
         const transactionPnl = currentRevenue - currentBetSize;
         const transactionRoi = currentBetSize
           ? (transactionPnl / currentBetSize) * 100
-          : 100;
+          : '-';
 
         operations.push({
           updateOne: {

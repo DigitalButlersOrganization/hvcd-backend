@@ -228,7 +228,7 @@ export class TokenHoldingService {
                   { $eq: ['$betSize', null] },
                 ],
               },
-              100,
+              '-',
               {
                 $multiply: [
                   {
