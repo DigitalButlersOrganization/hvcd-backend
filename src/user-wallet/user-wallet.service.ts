@@ -267,6 +267,12 @@ export class UserWalletService {
     const diffTime = currentDate.getTime() - targetDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return `${diffDays} days`;
+    let age = `${diffDays} days`;
+
+    if (diffDays > 180) {
+      age = '180+ days';
+    }
+
+    return age;
   }
 }
