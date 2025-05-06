@@ -265,14 +265,13 @@ export class TokenHoldingService {
           name: '$holdings.name',
           wallet: '$holdings.wallet',
           mintAddress: '$holdings.mintAddress',
-          totalPrice: '$holdings.totalPrice',
           betSize: '$holdings.betSize',
           totalRevenue: '$holdings.totalRevenue',
           pnl: '$holdings.pnl',
           roi: '$holdings.roi',
           icon: '$holdings.icon',
           dateLastTraded: '$holdings.dateLastTraded',
-          balance: '$holdings.balance',
+          balance: '$holdings.totalPrice',
           supply: '$holdings.supply',
           balanceMaxHoldings: {
             $cond: [
