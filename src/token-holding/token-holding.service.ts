@@ -313,14 +313,6 @@ export class TokenHoldingService {
       });
     }
 
-    const skip = (paginationDto.page - 1) * paginationDto.limit;
-    aggregateStages.push({
-      $facet: {
-        paginatedResults: [{ $skip: skip }, { $limit: paginationDto.limit }],
-        totalCount: [{ $count: 'count' }],
-      },
-    });
-
     const tokenHoldingsAggregate =
       await this.tokenHoldingModel.aggregate(aggregateStages);
 
