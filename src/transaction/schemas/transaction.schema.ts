@@ -65,8 +65,8 @@ export class Transaction {
   @Prop()
   pnl: number;
 
-  @Prop()
-  roi: number;
+  @Prop({ type: mongoose.Schema.Types.Mixed })
+  roi: number | string;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

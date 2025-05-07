@@ -224,7 +224,7 @@ export class TransactionService {
       toPrice = (fromPrice * from.tokenAmount) / to.tokenAmount;
       tradableTokenMint = to.mint;
       action = TransactionActions.BUY;
-    } else {
+    } else if (to.mint === this.solanaMint) {
       toPrice = price.price;
       fromPrice = (toPrice * to.tokenAmount) / from.tokenAmount;
       tradableTokenMint = from.mint;

@@ -45,6 +45,40 @@ export class TestController {
     });
   }
 
+  @Get()
+  async test() {
+    const txs: TransactionDocument[] = await this.transactionModel.find({
+      wallet: '6818a5431ae4fe9c4a2d042f',
+    });
+    const txsC = {};
+
+    for (const tx of txs) {
+      if (!txsC[tx.tradableTokenMint]) {
+        txsC[tx.tradableTokenMint] = {};
+      }
+
+      if (
+        tx.tradableTokenMint === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+      ) {
+        console.log(tx);
+      }
+
+      if (tx.action === 'buy') {
+        if (!txsC[tx.tradableTokenMint]['buy']) {
+          txsC[tx.tradableTokenMint]['buy'] = 0;
+        }
+
+        txsC[tx.tradableTokenMint]['buy'] += tx.to.priceAmount;
+      } else {
+        if (!txsC[tx.tradableTokenMint]['sell']) {
+          txsC[tx.tradableTokenMint]['sell'] = 0;
+        }
+
+        txsC[tx.tradableTokenMint]['sell'] += tx.from.priceAmount;
+      }
+    }
+  }
+
   @Cron(CronExpression.EVERY_MINUTE)
   async updateTransactionMarketCap() {
     const wallets = await this.walletModel.find({
